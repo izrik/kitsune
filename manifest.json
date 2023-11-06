@@ -6,5 +6,13 @@
   "homepage_url": "https://github.com/izrik/kitsune",
   "icons": {
     "48": "icons/bolt.png"
+  },
+
+  "permissions": ["activeTab"],
+
+  "browser_action": {
+    "default_icon": "icons/bolt.png",
+    "default_title": "Kitsune",
+    "default_popup": "popup/kitsune.html"
   }
 }
