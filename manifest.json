@@ -1,0 +1,10 @@
+{
+  "manifest_version": 2,
+  "name": "Kitsune",
+  "version": "1.0",
+  "description": "Manages tabs and windows",
+  "homepage_url": "https://github.com/izrik/kitsune",
+  "icons": {
+    "48": "icons/bolt.png"
+  }
+}
