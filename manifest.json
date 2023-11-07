@@ -8,11 +8,21 @@
     "48": "icons/bolt.png"
   },
 
-  "permissions": ["activeTab"],
+  "permissions": [
+    "activeTab",
+    "sessions",
+    "storage"
+  ],
 
   "browser_action": {
     "default_icon": "icons/bolt.png",
     "default_title": "Kitsune",
     "default_popup": "popup/popup.html"
+  },
+
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "{01eb959e-462b-4e77-8591-dc2bde08a39c}"
+    }
   }
 }
