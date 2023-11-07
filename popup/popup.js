@@ -1,4 +1,4 @@
-import DataStore from '/kitsune.js';
+import {DataStore, refreshAppearanceForWindow} from '/kitsune.js';
 
 const dataStore = new DataStore();
 
@@ -13,6 +13,7 @@ async function setWindowTitle(title) {
     console.log(`setWindowTitle("${title}")`);
     const currentWindow = await window.browser.windows.getCurrent();
     await dataStore.saveTitleForWindow(currentWindow.id, title);
+    await refreshAppearanceForWindow(currentWindow.id);
 }
 
 document.querySelector('#popup-form').addEventListener('submit', async (e) => {
