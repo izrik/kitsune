@@ -31,6 +31,32 @@ async function getWindowAndTabCounts() {
     };
 }
 
+async function populateWindowsList() {
+    const windows = await browser.windows.getAll({populate: true});
+    const currentWindow = await browser.windows.getCurrent();
+    const windowsListItems = document.querySelector('#windows-list-items');
+
+    windowsListItems.innerHTML = '';
+
+    for (const window of windows) {
+        const windowTitle = await dataStore.getTitleForWindow(window.id);
+        const tabCount = window.tabs.length;
+        const isCurrentWindow = window.id === currentWindow.id;
+
+        const listItem = document.createElement('li');
+        const displayTitle = windowTitle || `Window ${window.id}`;
+        const currentMarker = isCurrentWindow ? ' (current)' : '';
+
+        listItem.textContent = `${displayTitle}: ${tabCount} tab${tabCount !== 1 ? 's' : ''}${currentMarker}`;
+
+        if (isCurrentWindow) {
+            listItem.style.fontWeight = 'bold';
+        }
+
+        windowsListItems.appendChild(listItem);
+    }
+}
+
 document.querySelector('#popup-form').addEventListener('submit', async (e) => {
     console.log('popup form submitted');
     e.preventDefault();
@@ -51,4 +77,6 @@ window.onload = async () => {
     document.querySelector('#window-count').textContent = counts.totalWindows;
     document.querySelector('#total-tab-count').textContent = counts.totalTabs;
     document.querySelector('#current-window-tab-count').textContent = counts.currentWindowTabs;
+
+    await populateWindowsList();
 };
