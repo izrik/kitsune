@@ -38,18 +38,36 @@ async function populateWindowsList() {
 
     windowsListItems.innerHTML = '';
 
+    // Create window data with titles and sort
+    const windowData = [];
     for (const window of windows) {
         const windowTitle = await dataStore.getTitleForWindow(window.id);
-        const tabCount = window.tabs.length;
-        const isCurrentWindow = window.id === currentWindow.id;
-
-        const listItem = document.createElement('li');
         const displayTitle = windowTitle || `Window ${window.id}`;
-        const currentMarker = isCurrentWindow ? ' (current)' : '';
+        windowData.push({
+            window,
+            displayTitle,
+            tabCount: window.tabs.length,
+            isCurrentWindow: window.id === currentWindow.id
+        });
+    }
 
-        listItem.textContent = `${displayTitle}: ${tabCount} tab${tabCount !== 1 ? 's' : ''}${currentMarker}`;
+    // Sort alphabetically by title, then by tab count (numeric)
+    windowData.sort((a, b) => {
+        const titleComparison = a.displayTitle.localeCompare(b.displayTitle);
+        if (titleComparison !== 0) {
+            return titleComparison;
+        }
+        return a.tabCount - b.tabCount;
+    });
 
-        if (isCurrentWindow) {
+    // Create and append list items
+    for (const data of windowData) {
+        const listItem = document.createElement('li');
+        const currentMarker = data.isCurrentWindow ? ' (current)' : '';
+
+        listItem.textContent = `${data.displayTitle}: ${data.tabCount} tab${data.tabCount !== 1 ? 's' : ''}${currentMarker}`;
+
+        if (data.isCurrentWindow) {
             listItem.style.fontWeight = 'bold';
         }
 
