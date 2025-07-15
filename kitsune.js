@@ -10,6 +10,36 @@ export class DataStore {
 
         await browser.sessions.setWindowValue(windowId, 'userWindowTitle', title);
     }
+
+    async getSleepingWindows() {
+        const sleepingWindows = await browser.storage.local.get('sleepingWindows');
+        return sleepingWindows.sleepingWindows || [];
+    }
+
+    async saveSleepingWindow(windowData) {
+        const sleepingWindows = await this.getSleepingWindows();
+
+        // Generate a unique UUID for this sleeping window
+        const uuid = crypto.randomUUID();
+
+        // Add new entry with UUID
+        sleepingWindows.push({
+            id: uuid,
+            originalWindowId: windowData.originalWindowId,
+            title: windowData.title,
+            tabs: windowData.tabs,
+            sleepTime: Date.now()
+        });
+
+        await browser.storage.local.set({sleepingWindows: sleepingWindows});
+        return uuid;
+    }
+
+    async removeSleepingWindow(uuid) {
+        const sleepingWindows = await this.getSleepingWindows();
+        const filteredWindows = sleepingWindows.filter(w => w.id !== uuid);
+        await browser.storage.local.set({sleepingWindows: filteredWindows});
+    }
 }
 
 const dataStore = new DataStore();
