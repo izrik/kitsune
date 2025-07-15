@@ -16,6 +16,21 @@ async function setWindowTitle(title) {
     await refreshAppearanceForWindow(currentWindow.id);
 }
 
+async function getWindowAndTabCounts() {
+    const windows = await browser.windows.getAll({populate: true});
+    const currentWindow = await browser.windows.getCurrent({populate: true});
+
+    const totalWindows = windows.length;
+    const totalTabs = windows.reduce((sum, window) => sum + window.tabs.length, 0);
+    const currentWindowTabs = currentWindow.tabs.length;
+
+    return {
+        totalWindows,
+        totalTabs,
+        currentWindowTabs
+    };
+}
+
 document.querySelector('#popup-form').addEventListener('submit', async (e) => {
     console.log('popup form submitted');
     e.preventDefault();
@@ -31,4 +46,9 @@ window.onload = async () => {
     const userWindowTitleInput = document.querySelector('#user-window-title-input');
     userWindowTitleInput.value = currentWindowTitle;
     userWindowTitleInput.select();
+
+    const counts = await getWindowAndTabCounts();
+    document.querySelector('#window-count').textContent = counts.totalWindows;
+    document.querySelector('#total-tab-count').textContent = counts.totalTabs;
+    document.querySelector('#current-window-tab-count').textContent = counts.currentWindowTabs;
 };
