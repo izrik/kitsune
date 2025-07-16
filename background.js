@@ -46,11 +46,28 @@ browser.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
             const { sleepingWindowData, currentWindowId } = request;
 
             // Create new window with the stored tabs
-            const urls = sleepingWindowData.tabs.map(tab => tab.url);
-            console.log('Background: creating window with URLs:', urls);
+            const allUrls = sleepingWindowData.tabs.map(tab => tab.url);
+            console.log('Background: all URLs from sleeping window:', allUrls);
+
+            // Replace privileged URLs that can't be opened by extensions with about:blank
+            const processedUrls = allUrls.map(url => {
+                const isValid = !url.startsWith('about:') && 
+                               !url.startsWith('chrome:') && 
+                               !url.startsWith('moz-extension:') &&
+                               !url.startsWith('resource:');
+                if (!isValid) {
+                    console.log('Background: replacing invalid URL with about:blank:', url);
+                    return 'about:blank';
+                }
+                return url;
+            });
+
+            console.log('Background: creating window with processed URLs:', processedUrls);
+
+            const urlsToCreate = processedUrls;
 
             const newWindow = await browser.windows.create({
-                url: urls
+                url: urlsToCreate
             });
 
             console.log('Background: window created with ID:', newWindow.id);
