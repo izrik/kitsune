@@ -1,5 +1,6 @@
 export class DataStore {
     async getTitleForWindow(windowId) {
+        console.log(`getTitleForWindow("${windowId})`);
         const userWindowTitle = await browser.sessions.getWindowValue(windowId, 'userWindowTitle');
         const defaultValue = '';
         return userWindowTitle || defaultValue;
@@ -11,21 +12,52 @@ export class DataStore {
         await browser.sessions.setWindowValue(windowId, 'userWindowTitle', title);
     }
 
+    async GetUuidForWindow(windowId) {
+        console.log(`GetUuidForWindow("${windowId})`);
+        const userWindowUuid = await browser.sessions.getWindowValue(windowId, 'userWindowUuid');
+        if (userWindowUuid) {
+            return userWindowUuid;
+        }
+
+        const uuid = crypto.randomUUID();
+        await this.SaveUuidForWindow(windowId, uuid);
+        return uuid;
+    }
+
+    async SaveUuidForWindow(windowId, uuid) {
+        console.log(`SaveUuidForWindow("${windowId}", "${uuid}")`);
+        await browser.sessions.setWindowValue(windowId, 'userWindowUuid', uuid);
+        return uuid;
+    }
+
+    async GetLogForWindow(windowId) {
+        console.log(`GetLogForWindow("${windowId})`);
+        const userWindowLog = await browser.sessions.getWindowValue(windowId, 'userWindowLog');
+        return userWindowLog || '';
+    }
+
+    async SaveLogForWindow(windowId, log) {
+        console.log(`SaveLogForWindow("${windowId}", "${log}")`);
+        await browser.sessions.setWindowValue(windowId, 'userWindowLog', log);
+        return log;
+    }
+
     async getSleepingWindows() {
+        console.log(`getSleepingWindows()`);
         const sleepingWindows = await browser.storage.local.get('sleepingWindows');
         return sleepingWindows.sleepingWindows || [];
     }
 
     async saveSleepingWindow(windowData) {
+        console.log(`saveSleepingWindow("${windowData}")`);
         const sleepingWindows = await this.getSleepingWindows();
 
-        // Generate a unique UUID for this sleeping window
-        const uuid = crypto.randomUUID();
+        // Use existing UUID if present, otherwise generate a new one
+        const uuid = windowData.uuid || crypto.randomUUID();
 
         // Add new entry with UUID
         sleepingWindows.push({
-            id: uuid,
-            originalWindowId: windowData.originalWindowId,
+            uuid: uuid,
             title: windowData.title,
             tabs: windowData.tabs,
             sleepTime: Date.now()
@@ -35,9 +67,11 @@ export class DataStore {
         return uuid;
     }
 
-    async removeSleepingWindow(uuid) {
+    async removeSleepingWindow(uuid, currentWindowId) {
+        console.log(`removeSleepingWindow(${uuid}, ${currentWindowId})`);
         const sleepingWindows = await this.getSleepingWindows();
-        const filteredWindows = sleepingWindows.filter(w => w.id !== uuid);
+        const filteredWindows = sleepingWindows.filter(w => w.uuid !== uuid);
+        this.SaveLogForWindow(currentWindowId, "sleepingWindows" + "\n" + "filteredWindows");
         await browser.storage.local.set({sleepingWindows: filteredWindows});
     }
 }
@@ -45,6 +79,7 @@ export class DataStore {
 const dataStore = new DataStore();
 
 export async function refreshAppearanceForWindow(windowId) {
+    console.log(`refreshAppearanceForWindow(${windowId})`);
     const title = await dataStore.getTitleForWindow(windowId);
     await browser.windows.update(windowId, {titlePreface: `[${title}] `});
 }

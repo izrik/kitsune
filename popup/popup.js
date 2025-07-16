@@ -9,11 +9,10 @@ async function getCurrentWindowTitle() {
     return currentWindowTitle;
 }
 
-async function setWindowTitle(title) {
-    console.log(`setWindowTitle("${title}")`);
-    const currentWindow = await window.browser.windows.getCurrent();
-    await dataStore.saveTitleForWindow(currentWindow.id, title);
-    await refreshAppearanceForWindow(currentWindow.id);
+async function setWindowTitle(title, windowId) {
+    console.log(`setWindowTitle("${title}", "${windowId}")`);
+    await dataStore.saveTitleForWindow(windowId, title);
+    await refreshAppearanceForWindow(windowId);
 }
 
 async function getWindowAndTabCounts() {
@@ -61,24 +60,26 @@ async function sleepWindow(windowData) {
     }
 }
 
-async function wakeWindow(sleepingWindowData) {
+async function wakeWindow(sleepingWindowData, currentWindowId) {
     try {
-        // Create new window with the stored tabs
-        const newWindow = await browser.windows.create({
-            url: sleepingWindowData.tabs.map(tab => tab.url)
+        console.log(`wakeWindow(${sleepingWindowData} -> {uuid: ${sleepingWindowData.uuid}, title: ${sleepingWindowData.title}, tabs: ${sleepingWindowData.tabs}, sleepTime: ${sleepingWindowData.sleepTime})`);
+
+        // Send message to background script to handle window creation
+        console.log('wakeWindow, sending message to background script...');
+
+        // Send message without waiting for response to avoid context issues
+        browser.runtime.sendMessage({
+            action: 'wakeWindow',
+            sleepingWindowData: sleepingWindowData,
+            currentWindowId: currentWindowId
+        }).catch(error => {
+            console.log('Message sending failed, but background should still handle it:', error);
         });
 
-        // Set the window title
-        await dataStore.saveTitleForWindow(newWindow.id, sleepingWindowData.title);
-        await refreshAppearanceForWindow(newWindow.id);
+        console.log('wakeWindow, message sent to background script');
 
-        // Remove from sleeping windows using UUID
-        await dataStore.removeSleepingWindow(sleepingWindowData.id);
-
-        console.log('Window woken up with new ID:', newWindow.id, 'Title:', sleepingWindowData.title);
-
-        // Refresh the popup
-        await refreshPopup();
+        // Close the popup after a brief delay to ensure message is sent
+        setTimeout(() => window.close(), 50);
 
     } catch (error) {
         console.error('Error waking window:', error);
@@ -178,7 +179,7 @@ async function populateWindowsList() {
             // Add click handler for wake button
             wakeButton.addEventListener('click', (e) => {
                 e.stopPropagation();
-                wakeWindow(data.sleepingData);
+                wakeWindow(data.sleepingData, currentWindow.id);
             });
 
             buttonContainer.appendChild(wakeButton);
@@ -201,26 +202,26 @@ async function populateWindowsList() {
                 sleepWindow(data);
             });
 
-            // Create close button
-            const closeButton = document.createElement('button');
-            closeButton.className = 'window-btn';
-            closeButton.title = 'Close window';
-
-            const closeIcon = document.createElement('img');
-            closeIcon.src = '/icons/close.png';
-            closeIcon.alt = 'Close';
-
-            closeButton.appendChild(closeIcon);
-
-            // Add click handler for close button
-            closeButton.addEventListener('click', (e) => {
-                e.stopPropagation();
-                browser.windows.remove(data.window.id);
-                setTimeout(refreshPopup, 100); // Refresh after a short delay
-            });
+            // // Create close button
+            // const closeButton = document.createElement('button');
+            // closeButton.className = 'window-btn';
+            // closeButton.title = 'Close window';
+            //
+            // const closeIcon = document.createElement('img');
+            // closeIcon.src = '/icons/close.png';
+            // closeIcon.alt = 'Close';
+            //
+            // closeButton.appendChild(closeIcon);
+            //
+            // // Add click handler for close button
+            // closeButton.addEventListener('click', (e) => {
+            //     e.stopPropagation();
+            //     browser.windows.remove(data.window.id);
+            //     setTimeout(refreshPopup, 100); // Refresh after a short delay
+            // });
 
             buttonContainer.appendChild(sleepButton);
-            buttonContainer.appendChild(closeButton);
+            // buttonContainer.appendChild(closeButton);
         }
 
         listItem.appendChild(windowInfo);
@@ -234,7 +235,8 @@ document.querySelector('#popup-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const userWindowTitle = document.querySelector('#user-window-title-input').value;
     console.log(`Got window title: ${userWindowTitle}`)
-    await setWindowTitle(userWindowTitle);
+    const currentWindow = await window.browser.windows.getCurrent();
+    await setWindowTitle(userWindowTitle, currentWindow.id);
     console.log("Set window title. Now closing the popup.")
     window.close();
 })
@@ -244,6 +246,12 @@ window.onload = async () => {
     const userWindowTitleInput = document.querySelector('#user-window-title-input');
     userWindowTitleInput.value = currentWindowTitle;
     userWindowTitleInput.select();
+
+    const currentWindow = await window.browser.windows.getCurrent();
+    document.querySelector('#window-id').textContent = currentWindow.id;
+    let uuid = await dataStore.GetUuidForWindow(currentWindow.id)
+    document.querySelector('#window-uuid').textContent = uuid;
+    document.querySelector('#window-log').textContent = await dataStore.GetLogForWindow(currentWindow.id);
 
     await refreshPopup();
 };
