@@ -132,3 +132,6 @@ dist
 # misc
 .idea/
 .DS_Store
+.opencode
+kitsune-windows-*.json
+web-ext-artifacts/
