@@ -211,6 +211,83 @@ async function populateWindowsList() {
     }
 }
 
+async function exportWindowsData() {
+    try {
+        console.log('exportWindowsData: Starting export...');
+
+        // Get all open windows
+        const windows = await browser.windows.getAll({populate: true});
+        console.log('exportWindowsData: Got open windows:', windows.length);
+
+        // Get sleeping windows
+        const sleepingWindows = await dataStore.getSleepingWindows();
+        console.log('exportWindowsData: Got sleeping windows:', sleepingWindows.length);
+
+        const exportData = {
+            timestamp: new Date().toISOString(),
+            openWindows: [],
+            sleepingWindows: []
+        };
+
+        // Process open windows
+        for (const window of windows) {
+            const windowTitle = await dataStore.getTitleForWindow(window.id);
+            const windowData = {
+                id: window.id,
+                title: windowTitle || `Window ${window.id}`,
+                state: 'open',
+                tabs: window.tabs.map(tab => ({
+                    title: tab.title,
+                    url: tab.url
+                }))
+            };
+            exportData.openWindows.push(windowData);
+        }
+
+        // Process sleeping windows
+        for (const sleepingWindow of sleepingWindows) {
+            const windowData = {
+                uuid: sleepingWindow.uuid,
+                title: sleepingWindow.title || `Sleeping Window ${sleepingWindow.uuid}`,
+                state: 'sleeping',
+                sleepTime: sleepingWindow.sleepTime,
+                tabs: sleepingWindow.tabs.map(tab => ({
+                    title: tab.title,
+                    url: tab.url
+                }))
+            };
+            exportData.sleepingWindows.push(windowData);
+        }
+
+        console.log('exportWindowsData: Prepared export data');
+
+        // Create and download JSON file
+        const jsonString = JSON.stringify(exportData, null, 2);
+        const blob = new Blob([jsonString], {type: 'application/json'});
+        const url = URL.createObjectURL(blob);
+
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const filename = `kitsune-windows-${timestamp}.json`;
+
+        // Create download link and trigger download
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+
+        // Clean up
+        URL.revokeObjectURL(url);
+
+        console.log('exportWindowsData: Export completed');
+
+    } catch (error) {
+        console.error('exportWindowsData: Error during export:', error);
+        alert('Error exporting windows data: ' + error.message);
+    }
+}
+
 document.querySelector('#popup-form').addEventListener('submit', async (e) => {
     console.log('popup form submitted');
     e.preventDefault();
@@ -235,4 +312,7 @@ window.onload = async () => {
     document.querySelector('#window-log').textContent = await dataStore.GetLogForWindow(currentWindow.id);
 
     await refreshPopup();
+
+    // Add export button click handler
+    document.querySelector('#export-button').addEventListener('click', exportWindowsData);
 };
