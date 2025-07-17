@@ -29,11 +29,7 @@ async function removeSleepingWindow(uuid, currentWindowId) {
 }
 
 async function refreshAppearanceForWindow(windowId) {
-    console.log(`refreshAppearanceForWindow("${windowId}")`);
-    const userWindowTitle = await browser.sessions.getWindowValue(windowId, 'userWindowTitle');
-    if (userWindowTitle) {
-        await browser.windows.update(windowId, { titlePreface: `[${userWindowTitle}] ` });
-    }
+    await dataStore.refreshAppearanceForWindow(windowId);
 }
 
 // Listen for messages from popup

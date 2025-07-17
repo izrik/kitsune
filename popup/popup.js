@@ -1,4 +1,4 @@
-import {DataStore, refreshAppearanceForWindow} from '/kitsune.js';
+import {DataStore} from '/kitsune.js';
 
 const dataStore = new DataStore();
 
@@ -12,7 +12,7 @@ async function getCurrentWindowTitle() {
 async function setWindowTitle(title, windowId) {
     console.log(`setWindowTitle("${title}", "${windowId}")`);
     await dataStore.saveTitleForWindow(windowId, title);
-    await refreshAppearanceForWindow(windowId);
+    await dataStore.refreshAppearanceForWindow(windowId);
 }
 
 async function getWindowAndTabCounts() {

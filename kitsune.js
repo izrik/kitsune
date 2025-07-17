@@ -74,12 +74,12 @@ export class DataStore {
         this.SaveLogForWindow(currentWindowId, "sleepingWindows" + "\n" + "filteredWindows");
         await browser.storage.local.set({sleepingWindows: filteredWindows});
     }
+
+    async refreshAppearanceForWindow(windowId) {
+        console.log(`refreshAppearanceForWindow(${windowId})`);
+        const title = await dataStore.getTitleForWindow(windowId);
+        await browser.windows.update(windowId, {titlePreface: `[${title}] `});
+    }
 }
 
 const dataStore = new DataStore();
-
-export async function refreshAppearanceForWindow(windowId) {
-    console.log(`refreshAppearanceForWindow(${windowId})`);
-    const title = await dataStore.getTitleForWindow(windowId);
-    await browser.windows.update(windowId, {titlePreface: `[${title}] `});
-}
