@@ -1,32 +1,31 @@
 // Background script for handling window wake operations
 // Can't use ES6 imports in manifest v2 background scripts, so inline the needed functions
 
+let dataStore = null;
+
+const kitsune = import("./kitsune.js").then((kitsune) => {
+    dataStore = new kitsune.DataStore();
+});
+
+
 async function saveTitleForWindow(windowId, title) {
-    console.log(`saveTitleForWindow("${windowId}", "${title}")`);
-    await browser.sessions.setWindowValue(windowId, 'userWindowTitle', title);
+    return await dataStore.saveTitleForWindow(windowId, title);
 }
 
 async function saveUuidForWindow(windowId, uuid) {
-    console.log(`SaveUuidForWindow("${windowId}", "${uuid}")`);
-    await browser.sessions.setWindowValue(windowId, 'userWindowUuid', uuid);
+    return await dataStore.SaveUuidForWindow(windowId, uuid);
 }
 
 async function getSleepingWindows() {
-    console.log(`getSleepingWindows()`);
-    const sleepingWindows = await browser.storage.local.get('sleepingWindows');
-    return sleepingWindows.sleepingWindows || [];
+    return await dataStore.getSleepingWindows();
 }
 
 async function saveSleepingWindows(sleepingWindows) {
-    console.log(`saveSleepingWindows()`);
-    await browser.storage.local.set({ sleepingWindows });
+    await dataStore.saveSleepingWindows(sleepingWindows);
 }
 
 async function removeSleepingWindow(uuid, currentWindowId) {
-    console.log(`removeSleepingWindow("${uuid}", "${currentWindowId}")`);
-    const sleepingWindows = await getSleepingWindows();
-    const filteredWindows = sleepingWindows.filter(w => w.uuid !== uuid);
-    await saveSleepingWindows(filteredWindows);
+    await dataStore.removeSleepingWindow(uuid, currentWindowId);
 }
 
 async function refreshAppearanceForWindow(windowId) {
