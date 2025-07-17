@@ -202,26 +202,7 @@ async function populateWindowsList() {
                 sleepWindow(data);
             });
 
-            // // Create close button
-            // const closeButton = document.createElement('button');
-            // closeButton.className = 'window-btn';
-            // closeButton.title = 'Close window';
-            //
-            // const closeIcon = document.createElement('img');
-            // closeIcon.src = '/icons/close.png';
-            // closeIcon.alt = 'Close';
-            //
-            // closeButton.appendChild(closeIcon);
-            //
-            // // Add click handler for close button
-            // closeButton.addEventListener('click', (e) => {
-            //     e.stopPropagation();
-            //     browser.windows.remove(data.window.id);
-            //     setTimeout(refreshPopup, 100); // Refresh after a short delay
-            // });
-
             buttonContainer.appendChild(sleepButton);
-            // buttonContainer.appendChild(closeButton);
         }
 
         listItem.appendChild(windowInfo);
