@@ -305,12 +305,6 @@ window.onload = async () => {
     userWindowTitleInput.value = currentWindowTitle;
     userWindowTitleInput.select();
 
-    const currentWindow = await window.browser.windows.getCurrent();
-    document.querySelector('#window-id').textContent = currentWindow.id;
-    let uuid = await dataStore.GetUuidForWindow(currentWindow.id)
-    document.querySelector('#window-uuid').textContent = uuid;
-    document.querySelector('#window-log').textContent = await dataStore.GetLogForWindow(currentWindow.id);
-
     await refreshPopup();
 
     // Add export button click handler

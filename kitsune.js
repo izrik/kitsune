@@ -30,18 +30,6 @@ export class DataStore {
         return uuid;
     }
 
-    async GetLogForWindow(windowId) {
-        console.log(`GetLogForWindow("${windowId})`);
-        const userWindowLog = await browser.sessions.getWindowValue(windowId, 'userWindowLog');
-        return userWindowLog || '';
-    }
-
-    async SaveLogForWindow(windowId, log) {
-        console.log(`SaveLogForWindow("${windowId}", "${log}")`);
-        await browser.sessions.setWindowValue(windowId, 'userWindowLog', log);
-        return log;
-    }
-
     async getSleepingWindows() {
         console.log(`getSleepingWindows()`);
         const sleepingWindows = await browser.storage.local.get('sleepingWindows');
@@ -71,7 +59,6 @@ export class DataStore {
         console.log(`removeSleepingWindow(${uuid}, ${currentWindowId})`);
         const sleepingWindows = await this.getSleepingWindows();
         const filteredWindows = sleepingWindows.filter(w => w.uuid !== uuid);
-        this.SaveLogForWindow(currentWindowId, "sleepingWindows" + "\n" + "filteredWindows");
         await browser.storage.local.set({sleepingWindows: filteredWindows});
     }
 
