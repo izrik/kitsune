@@ -34,14 +34,30 @@ async function getWindowAndTabCounts() {
 
 async function sleepWindow(windowData) {
     try {
-        // Store window state
+        // Store comprehensive window state
         const windowState = {
             originalWindowId: windowData.window.id,
             title: windowData.displayTitle,
+            windowProperties: {
+                focused: windowData.window.focused,
+                incognito: windowData.window.incognito,
+                state: windowData.window.state,
+                type: windowData.window.type,
+                top: windowData.window.top,
+                left: windowData.window.left,
+                width: windowData.window.width,
+                height: windowData.window.height
+            },
             tabs: windowData.window.tabs.map(tab => ({
                 url: tab.url,
                 title: tab.title,
-                favIconUrl: tab.favIconUrl
+                favIconUrl: tab.favIconUrl,
+                index: tab.index,
+                pinned: tab.pinned,
+                active: tab.active,
+                muted: tab.mutedInfo?.muted || false,
+                discarded: tab.discarded,
+                autoDiscardable: tab.autoDiscardable
             }))
         };
 

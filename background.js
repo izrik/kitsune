@@ -40,7 +40,7 @@ browser.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
         try {
             const { sleepingWindowData, currentWindowId } = request;
 
-            // Create new window with the stored tabs
+            // Create new window with enhanced state restoration
             const allUrls = sleepingWindowData.tabs.map(tab => tab.url);
             console.log('Background: all URLs from sleeping window:', allUrls);
 
@@ -59,13 +59,56 @@ browser.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
 
             console.log('Background: creating window with processed URLs:', processedUrls);
 
-            const urlsToCreate = processedUrls;
+            // Create window with restored properties
+            const windowCreateOptions = {
+                url: processedUrls
+            };
 
-            const newWindow = await browser.windows.create({
-                url: urlsToCreate
-            });
+            // Restore window properties if available
+            if (sleepingWindowData.windowProperties) {
+                const props = sleepingWindowData.windowProperties;
+                if (props.state) windowCreateOptions.state = props.state;
+                if (props.type) windowCreateOptions.type = props.type;
+                if (props.incognito) windowCreateOptions.incognito = props.incognito;
+                if (props.top !== undefined) windowCreateOptions.top = props.top;
+                if (props.left !== undefined) windowCreateOptions.left = props.left;
+                if (props.width) windowCreateOptions.width = props.width;
+                if (props.height) windowCreateOptions.height = props.height;
+            }
+
+            const newWindow = await browser.windows.create(windowCreateOptions);
 
             console.log('Background: window created with ID:', newWindow.id);
+
+            // Restore tab-specific properties
+            if (sleepingWindowData.tabs && newWindow.tabs) {
+                console.log('Background: restoring tab properties...');
+
+                for (let i = 0; i < Math.min(sleepingWindowData.tabs.length, newWindow.tabs.length); i++) {
+                    const savedTab = sleepingWindowData.tabs[i];
+                    const newTab = newWindow.tabs[i];
+
+                    try {
+                        // Restore pinned state
+                        if (savedTab.pinned) {
+                            await browser.tabs.update(newTab.id, { pinned: true });
+                        }
+
+                        // Restore muted state
+                        if (savedTab.muted) {
+                            await browser.tabs.update(newTab.id, { muted: true });
+                        }
+
+                        // Set active tab (find the tab that was active before)
+                        if (savedTab.active) {
+                            await browser.tabs.update(newTab.id, { active: true });
+                        }
+
+                    } catch (tabError) {
+                        console.log('Background: error restoring tab properties:', tabError);
+                    }
+                }
+            }
 
             // Set the window title
             await saveTitleForWindow(newWindow.id, sleepingWindowData.title);
