@@ -94,9 +94,6 @@ async function wakeWindow(sleepingWindowData, currentWindowId) {
 
         console.log('wakeWindow, message sent to background script');
 
-        // Close the window after a brief delay to ensure message is sent
-        setTimeout(() => window.close(), 50);
-
     } catch (error) {
         console.error('Error waking window:', error);
     }
