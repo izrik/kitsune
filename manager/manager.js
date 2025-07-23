@@ -19,19 +19,6 @@ class WindowData {
     }
 }
 
-async function getCurrentWindowTitle() {
-    const currentWindow = await window.browser.windows.getCurrent();
-    const currentWindowTitle = await dataStore.getTitleForWindow(currentWindow.id);
-
-    return currentWindowTitle;
-}
-
-async function setWindowTitle(title, windowId) {
-    console.log(`setWindowTitle("${title}", "${windowId}")`);
-    await dataStore.saveTitleForWindow(windowId, title);
-    await dataStore.refreshAppearanceForWindow(windowId);
-}
-
 async function getWindowAndTabCounts() {
     const windows = await browser.windows.getAll({populate: true});
     const currentWindow = await browser.windows.getCurrent({populate: true});
