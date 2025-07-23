@@ -2,6 +2,23 @@ import {DataStore} from '/kitsune.js';
 
 const dataStore = new DataStore();
 
+class WindowData {
+    constructor(options = {}) {
+        this.window = options.window || null;
+        this.displayTitle = options.displayTitle || '';
+        this.tabCount = options.tabCount || 0;
+        this.isCurrentWindow = options.isCurrentWindow || false;
+        this.isSleeping = options.isSleeping || false;
+        this.sleepingData = options.sleepingData || null;
+        this.id = options.id || null;
+        this.title = options.title || '';
+        this.state = options.state || '';
+        this.uuid = options.uuid || null;
+        this.sleepTime = options.sleepTime || null;
+        this.tabs = options.tabs || [];
+    }
+}
+
 async function getCurrentWindowTitle() {
     const currentWindow = await window.browser.windows.getCurrent();
     const currentWindowTitle = await dataStore.getTitleForWindow(currentWindow.id);
@@ -123,25 +140,25 @@ async function populateWindowsList() {
     for (const window of windows) {
         const windowTitle = await dataStore.getTitleForWindow(window.id);
         const displayTitle = windowTitle || `Window ${window.id}`;
-        windowData.push({
+        windowData.push(new WindowData({
             window,
             displayTitle,
             tabCount: window.tabs.length,
             isCurrentWindow: window.id === currentWindow.id,
             isSleeping: false
-        });
+        }));
     }
 
     // Add sleeping windows
     for (const sleepingWindow of sleepingWindows) {
-        windowData.push({
+        windowData.push(new WindowData({
             window: null,
             displayTitle: sleepingWindow.title || `Window ${sleepingWindow.id}`,
             tabCount: sleepingWindow.tabs.length,
             isCurrentWindow: false,
             isSleeping: true,
             sleepingData: sleepingWindow
-        });
+        }));
     }
 
     // Sort alphabetically by title, then by tab count (numeric)
@@ -248,7 +265,7 @@ async function exportWindowsData() {
         // Process open windows
         for (const window of windows) {
             const windowTitle = await dataStore.getTitleForWindow(window.id);
-            const windowData = {
+            const windowData = new WindowData({
                 id: window.id,
                 title: windowTitle || `Window ${window.id}`,
                 state: 'open',
@@ -256,13 +273,13 @@ async function exportWindowsData() {
                     title: tab.title,
                     url: tab.url
                 }))
-            };
+            });
             exportData.openWindows.push(windowData);
         }
 
         // Process sleeping windows
         for (const sleepingWindow of sleepingWindows) {
-            const windowData = {
+            const windowData = new WindowData({
                 uuid: sleepingWindow.uuid,
                 title: sleepingWindow.title || `Sleeping Window ${sleepingWindow.uuid}`,
                 state: 'sleeping',
@@ -271,7 +288,7 @@ async function exportWindowsData() {
                     title: tab.title,
                     url: tab.url
                 }))
-            };
+            });
             exportData.sleepingWindows.push(windowData);
         }
 
