@@ -102,4 +102,21 @@ export class DataStore {
     }
 }
 
+export class WindowData {
+    constructor(options = {}) {
+        this.window = options.window || null;
+        this.displayTitle = options.displayTitle || '';
+        this.tabCount = options.tabCount || 0;
+        this.isCurrentWindow = options.isCurrentWindow || false;
+        this.isSleeping = options.isSleeping || false;
+        this.sleepingData = options.sleepingData || null;
+        this.id = options.id || null;
+        this.title = options.title || '';
+        this.state = options.state || '';
+        this.uuid = options.uuid || null;
+        this.sleepTime = options.sleepTime || null;
+        this.tabs = options.tabs || [];
+    }
+}
+
 const dataStore = new DataStore();
