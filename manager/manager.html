@@ -59,15 +59,17 @@
     </style>
 </head>
 <body>
-<form id="popup-form" autocomplete="off">
-    <p>Set the window title:
-        <span id="btn-settings" style="float:right; cursor: pointer;">
-            ️<img alt="Settings" title="Settings" src="/icons/settings.png"/>
-        </span>
-    </p>
-    <input id="user-window-title-input" type="text" autofocus/>
-    <input id="submit" type="submit" value="OK"/>
-</form>
-<script async src="popup.js" type="module"></script>
+<div id="stats">
+    <p>Windows: <span id="window-count">-</span> | Total tabs: <span id="total-tab-count">-</span> | Current window tabs: <span id="current-window-tab-count">-</span></p>
+</div>
+<div id="windows-list">
+    <h3>Open Windows:</h3>
+    <ul id="windows-list-items"></ul>
+</div>
+<hr/>
+<div id="export-section">
+    <button id="export-button">Export Windows Data</button>
+</div>
+<script async src="manager.js" type="module"></script>
 </body>
 </html>
