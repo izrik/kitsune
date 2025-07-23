@@ -1,6 +1,6 @@
 export class DataStore {
     async getTitleForWindow(windowId) {
-        console.log(`getTitleForWindow("${windowId})`);
+        console.log(`getTitleForWindow(${windowId})`);
         const userWindowTitle = await browser.sessions.getWindowValue(windowId, 'userWindowTitle');
         const defaultValue = '';
         return userWindowTitle || defaultValue;
