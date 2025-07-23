@@ -1,15 +1,36 @@
 export class DataStore {
     async getTitleForWindow(windowId) {
         console.log(`getTitleForWindow(${windowId})`);
-        const userWindowTitle = await browser.sessions.getWindowValue(windowId, 'userWindowTitle');
-        const defaultValue = '';
-        return userWindowTitle || defaultValue;
+        const windowData = await this.getWindowDataForWindow(windowId);
+        return windowData?.displayTitle || '';
     }
 
     async saveTitleForWindow(windowId, title) {
         console.log(`saveTitleForWindow("${windowId}", "${title}")`);
 
-        await browser.sessions.setWindowValue(windowId, 'userWindowTitle', title);
+        // Get existing window data or create new one
+        let windowData = await this.getWindowDataForWindow(windowId);
+        if (!windowData) {
+            windowData = {
+                displayTitle: title,
+                window: null,
+                tabCount: 0,
+                isCurrentWindow: false,
+                isSleeping: false,
+                sleepingData: null,
+                id: windowId,
+                title: title,
+                state: '',
+                uuid: null,
+                sleepTime: null,
+                tabs: []
+            };
+        } else {
+            windowData.displayTitle = title;
+            windowData.title = title;
+        }
+
+        await this.saveWindowDataForWindow(windowId, windowData);
     }
 
     async GetUuidForWindow(windowId) {
@@ -60,6 +81,18 @@ export class DataStore {
         const sleepingWindows = await this.getSleepingWindows();
         const filteredWindows = sleepingWindows.filter(w => w.uuid !== uuid);
         await browser.storage.local.set({sleepingWindows: filteredWindows});
+    }
+
+    async getWindowDataForWindow(windowId) {
+        console.log(`getWindowDataForWindow(${windowId})`);
+        const windowDataJson = await browser.sessions.getWindowValue(windowId, 'userWindowData');
+        return windowDataJson ? JSON.parse(windowDataJson) : null;
+    }
+
+    async saveWindowDataForWindow(windowId, windowData) {
+        console.log(`saveWindowDataForWindow("${windowId}", windowData)`);
+        const windowDataJson = JSON.stringify(windowData);
+        await browser.sessions.setWindowValue(windowId, 'userWindowData', windowDataJson);
     }
 
     async refreshAppearanceForWindow(windowId) {
