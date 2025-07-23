@@ -193,6 +193,7 @@ async function populateWindowsList() {
             wakeButton.addEventListener('click', (e) => {
                 e.stopPropagation();
                 wakeWindow(data.sleepingData, currentWindow.id);
+                // TODO: update the button
             });
 
             buttonContainer.appendChild(wakeButton);
@@ -212,7 +213,9 @@ async function populateWindowsList() {
             // Add click handler for sleep button
             sleepButton.addEventListener('click', (e) => {
                 e.stopPropagation();
+                // TODO: refresh the info about the window and tabs
                 sleepWindow(data);
+                // TODO: updated the button
             });
 
             buttonContainer.appendChild(sleepButton);
