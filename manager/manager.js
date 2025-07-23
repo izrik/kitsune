@@ -103,6 +103,62 @@ async function wakeWindow(sleepingWindowData, currentWindowId) {
     }
 }
 
+function showWindowInfo(windowData) {
+    const detailsContainer = document.querySelector('#window-details');
+    const detailsContent = document.querySelector('#window-details-content');
+
+    let detailsHtml = '';
+
+    // Basic window information
+    detailsHtml += `<div class="detail-row"><span class="detail-label">Title:</span> ${windowData.displayTitle}</div>`;
+    detailsHtml += `<div class="detail-row"><span class="detail-label">Status:</span> ${windowData.isSleeping ? 'Sleeping' : 'Open'}</div>`;
+    detailsHtml += `<div class="detail-row"><span class="detail-label">Tabs:</span> ${windowData.tabCount}</div>`;
+
+    if (windowData.isCurrentWindow) {
+        detailsHtml += `<div class="detail-row"><span class="detail-label">Current:</span> Yes</div>`;
+    }
+
+    if (windowData.isSleeping && windowData.sleepingData) {
+        if (windowData.sleepingData.sleepTime) {
+            const sleepDate = new Date(windowData.sleepingData.sleepTime);
+            detailsHtml += `<div class="detail-row"><span class="detail-label">Sleep Time:</span> ${sleepDate.toLocaleString()}</div>`;
+        }
+        if (windowData.sleepingData.uuid) {
+            detailsHtml += `<div class="detail-row"><span class="detail-label">UUID:</span> ${windowData.sleepingData.uuid}</div>`;
+        }
+    }
+
+    if (!windowData.isSleeping && windowData.window) {
+        detailsHtml += `<div class="detail-row"><span class="detail-label">ID:</span> ${windowData.window.id}</div>`;
+        if (windowData.window.type) {
+            detailsHtml += `<div class="detail-row"><span class="detail-label">Type:</span> ${windowData.window.type}</div>`;
+        }
+        if (windowData.window.state) {
+            detailsHtml += `<div class="detail-row"><span class="detail-label">State:</span> ${windowData.window.state}</div>`;
+        }
+    }
+
+    // Tabs information
+    const tabs = windowData.isSleeping ? windowData.sleepingData?.tabs : windowData.window?.tabs;
+    if (tabs && tabs.length > 0) {
+        detailsHtml += `<div class="detail-row"><span class="detail-label">Tabs:</span></div>`;
+        detailsHtml += `<div class="tabs-list">`;
+        tabs.forEach((tab, index) => {
+            const tabTitle = tab.title || 'Untitled';
+            const tabUrl = tab.url || '';
+            detailsHtml += `<div class="tab-item">${index + 1}. ${tabTitle}`;
+            if (tabUrl && tabUrl !== tabTitle) {
+                detailsHtml += `<br>&nbsp;&nbsp;&nbsp;<small>${tabUrl}</small>`;
+            }
+            detailsHtml += `</div>`;
+        });
+        detailsHtml += `</div>`;
+    }
+
+    detailsContent.innerHTML = detailsHtml;
+    detailsContainer.classList.add('visible');
+}
+
 async function refreshManager() {
     const counts = await getWindowAndTabCounts();
     document.querySelector('#window-count').textContent = counts.totalWindows;
@@ -180,6 +236,23 @@ async function populateWindowsList() {
         // Create button container
         const buttonContainer = document.createElement('div');
         buttonContainer.className = 'window-buttons';
+
+        // Add info button for all windows
+        const infoButton = document.createElement('button');
+        infoButton.className = 'window-btn';
+        infoButton.title = 'Show window details';
+
+        const infoIcon = document.createElement('img');
+        infoIcon.src = '/icons/read_more.png';
+        infoIcon.alt = 'Info';
+
+        infoButton.appendChild(infoIcon);
+        infoButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            showWindowInfo(data);
+        });
+
+        buttonContainer.appendChild(infoButton);
 
         if (data.isSleeping) {
             // For sleeping windows, show wake button instead of sleep button

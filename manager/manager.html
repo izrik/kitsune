@@ -56,6 +56,50 @@
             font-family: Arial, sans-serif;
             font-size: 12px;
         }
+
+        #window-details {
+            margin-top: 10px;
+            padding: 8px;
+            border: 1px solid #ccc;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+            display: none;
+        }
+
+        #window-details.visible {
+            display: block;
+        }
+
+        #window-details h4 {
+            margin: 0 0 8px 0;
+            color: #333;
+        }
+
+        #window-details-content {
+            font-size: 11px;
+        }
+
+        .detail-row {
+            margin-bottom: 4px;
+        }
+
+        .detail-label {
+            font-weight: bold;
+            display: inline-block;
+            min-width: 60px;
+        }
+
+        .tabs-list {
+            max-height: 100px;
+            overflow-y: auto;
+            margin-top: 4px;
+            padding-left: 16px;
+        }
+
+        .tab-item {
+            margin-bottom: 2px;
+            font-size: 10px;
+        }
     </style>
 </head>
 <body>
@@ -65,6 +109,10 @@
 <div id="windows-list">
     <h3>Open Windows:</h3>
     <ul id="windows-list-items"></ul>
+</div>
+<div id="window-details">
+    <h4>Window Details</h4>
+    <div id="window-details-content"></div>
 </div>
 <hr/>
 <div id="export-section">
