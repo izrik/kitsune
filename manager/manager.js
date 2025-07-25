@@ -234,52 +234,37 @@ async function populateWindowsList() {
             e.stopPropagation();
             showWindowInfo(data);
         });
-
         buttonContainer.appendChild(infoButton);
 
-        if (data.isSleeping) {
-            // For sleeping windows, show wake button instead of sleep button
-            const wakeButton = document.createElement('button');
-            wakeButton.className = 'window-btn';
-            wakeButton.title = 'Wake window';
-
-            const wakeIcon = document.createElement('img');
-            wakeIcon.src = '/icons/sunny.png';
-            wakeIcon.alt = 'Wake';
-
-            wakeButton.appendChild(wakeIcon);
-
-            // Add click handler for wake button
-            wakeButton.addEventListener('click', (e) => {
-                e.stopPropagation();
+        const sleepWakeButton = document.createElement('button');
+        sleepWakeButton.className = 'window-btn';
+        const sleepWakeIcon = document.createElement('img');
+        const setSleepWakeButton = function (_data) {
+            console.log('setSleepWakeButton, data.isSleeping: ' + _data.isSleeping);
+            if (_data.isSleeping) {
+                sleepWakeButton.title = 'Wake window';
+                sleepWakeIcon.src = '/icons/sunny.png';
+                sleepWakeIcon.alt = 'Wake';
+            } else {
+                sleepWakeButton.title = 'Sleep window';
+                sleepWakeIcon.src = '/icons/bedtime.png';
+                sleepWakeIcon.alt = 'Sleep';
+            }
+        }
+        setSleepWakeButton(data);
+        sleepWakeButton.appendChild(sleepWakeIcon);
+        sleepWakeButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (data.isSleeping) {
                 wakeWindow(data.sleepingData, currentWindow.id);
-                // TODO: update the button
-            });
-
-            buttonContainer.appendChild(wakeButton);
-
-        } else {
-            // For open windows, show sleep button
-            const sleepButton = document.createElement('button');
-            sleepButton.className = 'window-btn';
-            sleepButton.title = 'Sleep window';
-
-            const sleepIcon = document.createElement('img');
-            sleepIcon.src = '/icons/bedtime.png';
-            sleepIcon.alt = 'Sleep';
-
-            sleepButton.appendChild(sleepIcon);
-
-            // Add click handler for sleep button
-            sleepButton.addEventListener('click', (e) => {
-                e.stopPropagation();
+            } else {
                 // TODO: refresh the info about the window and tabs
                 sleepWindow(data);
-                // TODO: updated the button
-            });
-
-            buttonContainer.appendChild(sleepButton);
-        }
+            }
+            data.isSleeping = !data.isSleeping;
+            setSleepWakeButton(data);
+        });
+        buttonContainer.appendChild(sleepWakeButton);
 
         listItem.appendChild(windowInfo);
         listItem.appendChild(buttonContainer);
