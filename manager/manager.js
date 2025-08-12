@@ -152,32 +152,52 @@ async function refreshManager() {
 }
 
 async function populateWindowsList() {
-    const windows = await browser.windows.getAll({populate: true});
     const currentWindow = await browser.windows.getCurrent();
     const sleepingWindows = await dataStore.getSleepingWindows();
     const windowsListItems = document.querySelector('#windows-list-items');
 
     windowsListItems.innerHTML = '';
 
-    // Create window data with titles and sort
-    const windowData = [];
+    // Get stored window data
+    const windowDatas = await dataStore.GetWindowDatas();
+    console.log(windowDatas.length + " starting window datas");
 
     // Add open windows
+    const windows = await browser.windows.getAll({populate: true});
+    console.log(windows.length + " open windows");
     for (const window of windows) {
-        const windowTitle = await dataStore.getTitleForWindow(window.id);
-        const displayTitle = windowTitle || `Window ${window.id}`;
-        windowData.push(new WindowData({
+        const uuid = await dataStore.GetUuidForWindow(window.id);
+        let wd = await dataStore.GetWindowDataByUuid(uuid);
+        let displayTitle = await dataStore.getTitleForWindow(window.id);
+        if (wd) {
+            if (!wd.displayTitle) {
+            }
+            if (!windowDatas.includes(wd)) {
+                windowDatas.push(wd);
+            }
+            continue;
+        }
+        if (displayTitle) {
+        } else {
+            displayTitle = 'Window ' + window.id
+        }
+        wd = new WindowData({
             window,
-            displayTitle,
+            uuid: uuid,
+            id: window.id,
+            displayTitle: displayTitle,
             tabCount: window.tabs.length,
             isCurrentWindow: window.id === currentWindow.id,
             isSleeping: false
-        }));
+        });
+        await dataStore.SetWindowDataForUuid(uuid, wd);
+        windowDatas.push(wd);
     }
 
     // Add sleeping windows
+    console.log(sleepingWindows.length + " sleeping windows");
     for (const sleepingWindow of sleepingWindows) {
-        windowData.push(new WindowData({
+        windowDatas.push(new WindowData({
             window: null,
             displayTitle: sleepingWindow.title || `Window ${sleepingWindow.id}`,
             tabCount: sleepingWindow.tabs.length,
@@ -188,7 +208,8 @@ async function populateWindowsList() {
     }
 
     // Sort alphabetically by title, then by tab count (numeric)
-    windowData.sort((a, b) => {
+    console.log("window datas before sorting: " + windowDatas);
+    windowDatas.sort((a, b) => {
         const titleComparison = a.displayTitle.localeCompare(b.displayTitle);
         if (titleComparison !== 0) {
             return titleComparison;
@@ -196,25 +217,39 @@ async function populateWindowsList() {
         return a.tabCount - b.tabCount;
     });
 
-    // Create and append list items
-    for (const data of windowData) {
-        const listItem = document.createElement('li');
+    console.log(windowDatas.length + " window datas");
+    const updateWindowInfoSpan = function (windowInfo, data) {
+        windowInfo.className = 'window-info';
         const currentMarker = data.isCurrentWindow ? ' (current)' : '';
         const sleepMarker = data.isSleeping ? ' (sleeping)' : '';
-
-        // Create window info span
-        const windowInfo = document.createElement('span');
-        windowInfo.className = 'window-info';
         windowInfo.textContent = `${data.displayTitle}: ${data.tabCount} tab${data.tabCount !== 1 ? 's' : ''}${currentMarker}${sleepMarker}`;
 
         if (data.isCurrentWindow) {
             windowInfo.style.fontWeight = 'bold';
+        } else {
+            windowInfo.style.fontWeight = null;
+            // console.log("isCurrentWindow font weight: " + windowInfo.style.fontWeight)
         }
 
         if (data.isSleeping) {
             windowInfo.style.fontStyle = 'italic';
             windowInfo.style.color = '#666';
+        } else {
+            windowInfo.style.fontStyle = null;
+            windowInfo.style.color = null;
+            // console.log("isSleeping font style: " + windowInfo.style.fontStyle)
+            // console.log("isSleeping font color: " + windowInfo.style.color)
         }
+    }
+
+    // Create and append list items
+    for (const data of windowDatas) {
+
+        const listItem = document.createElement('li');
+
+        // Create window info span
+        const windowInfo = document.createElement('span');
+        updateWindowInfoSpan(windowInfo, data);
 
         // Create button container
         const buttonContainer = document.createElement('div');
@@ -263,6 +298,7 @@ async function populateWindowsList() {
             }
             data.isSleeping = !data.isSleeping;
             setSleepWakeButton(data);
+            updateWindowInfoSpan(windowInfo, data);
         });
         buttonContainer.appendChild(sleepWakeButton);
 

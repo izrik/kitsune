@@ -34,7 +34,10 @@ export class DataStore {
     }
 
     async GetUuidForWindow(windowId) {
-        console.log(`GetUuidForWindow("${windowId})`);
+        console.log(`GetUuidForWindow("${windowId}")`);
+        if (windowId == null) {
+            return null;
+        }
         const userWindowUuid = await browser.sessions.getWindowValue(windowId, 'userWindowUuid');
         if (userWindowUuid) {
             return userWindowUuid;
@@ -104,6 +107,17 @@ export class DataStore {
     windowDatasByUuid = {};
     async GetWindowDataByUuid(uuid) {
         return this.windowDatasByUuid[uuid];
+    }
+    async GetWindowDatas() {
+        let rv = []
+        for (const wd in this.windowDatasByUuid.values){
+            rv.push(wd);
+        }
+        return rv;
+    }
+    async SetWindowDataForUuid(uuid, wd) {
+        this.windowDatasByUuid[uuid] = wd;
+        return wd;
     }
 }
 
