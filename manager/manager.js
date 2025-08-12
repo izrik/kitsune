@@ -385,10 +385,20 @@ async function exportWindowsData() {
     }
 }
 
+async function minimizeAllWindows() {
+    const windows = await browser.windows.getAll();
+
+    for (const window of windows) {
+        const wid = window.id;
+        browser.windows.update(wid, {state: "minimized"})
+    }
+}
+
 window.onload = async () => {
 
     await refreshManager();
 
     // Add export button click handler
     document.querySelector('#export-button').addEventListener('click', exportWindowsData);
+    document.querySelector('#minimize-all-windows-button').addEventListener('click', minimizeAllWindows);
 };
