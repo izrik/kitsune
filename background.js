@@ -20,8 +20,9 @@ async function getSleepingWindows() {
     return await dataStore.getSleepingWindows();
 }
 
-async function saveSleepingWindows(sleepingWindows) {
-    await dataStore.saveSleepingWindows(sleepingWindows);
+    for (const window of sleepingWindows) {
+        await dataStore.saveSleepingWindow(window);
+    }
 }
 
 async function removeSleepingWindow(uuid, currentWindowId) {
