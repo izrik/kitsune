@@ -100,7 +100,7 @@ export class DataStore {
 
     async refreshAppearanceForWindow(windowId) {
         console.log(`refreshAppearanceForWindow(${windowId})`);
-        const title = await dataStore.getTitleForWindow(windowId);
+        const title = await this.getTitleForWindow(windowId);
         await browser.windows.update(windowId, {titlePreface: `[${title}] `});
     }
 
