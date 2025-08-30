@@ -110,7 +110,7 @@ export class DataStore {
     }
     async GetWindowDatas() {
         let rv = []
-        for (const wd in this.windowDatasByUuid.values){
+        for (const wd in Object.values(this.windowDatasByUuid)) {
             rv.push(wd);
         }
         return rv;
