@@ -115,6 +115,19 @@ export class DataStore {
         }
         return rv;
     }
+
+    async SetWindowDatas(windowDatas) {
+        let fs = [];
+        for (const wd of windowDatas) {
+            console.log(`DataStore.SetWindowDatas: ${wd.uuid} ${wd}`);
+            const f = dataStore.SetWindowDataForUuid(wd.uuid, wd);
+            fs.push(f);
+        }
+        for (const f of fs) {
+            await f;
+        }
+    }
+
     async SetWindowDataForUuid(uuid, wd) {
         this.windowDatasByUuid[uuid] = wd;
         return wd;

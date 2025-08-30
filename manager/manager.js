@@ -207,6 +207,8 @@ async function populateWindowsList() {
         }));
     }
 
+    await dataStore.SetWindowDatas(windowDatas);
+
     // Sort alphabetically by title, then by tab count (numeric)
     console.log("window datas before sorting: " + windowDatas);
     windowDatas.sort((a, b) => {
