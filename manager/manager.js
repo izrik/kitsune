@@ -276,36 +276,36 @@ async function populateWindowsList() {
         });
         buttonContainer.appendChild(infoButton);
 
-        const sleepWakeButton = document.createElement('button');
-        sleepWakeButton.className = 'window-btn';
-        const sleepWakeIcon = document.createElement('img');
-        const setSleepWakeButton = function (_data) {
-            console.debug('setSleepWakeButton, data.isSleeping: ' + _data.isSleeping);
-            if (_data.isSleeping) {
-                sleepWakeButton.title = 'Wake window';
-                sleepWakeIcon.src = '/icons/sunny.png';
-                sleepWakeIcon.alt = 'Wake';
-            } else {
-                sleepWakeButton.title = 'Sleep window';
-                sleepWakeIcon.src = '/icons/bedtime.png';
-                sleepWakeIcon.alt = 'Sleep';
-            }
-        }
-        setSleepWakeButton(data);
-        sleepWakeButton.appendChild(sleepWakeIcon);
-        sleepWakeButton.addEventListener('click', (e) => {
-            e.stopPropagation();
-            if (data.isSleeping) {
-                wakeWindow(data.sleepingData, currentWindow.id);
-            } else {
-                // TODO: refresh the info about the window and tabs
-                sleepWindow(data);
-            }
-            data.isSleeping = !data.isSleeping;
-            setSleepWakeButton(data);
-            updateWindowInfoSpan(windowInfo, data);
-        });
-        buttonContainer.appendChild(sleepWakeButton);
+        // const sleepWakeButton = document.createElement('button');
+        // sleepWakeButton.className = 'window-btn';
+        // const sleepWakeIcon = document.createElement('img');
+        // const setSleepWakeButton = function (_data) {
+        //     console.debug('setSleepWakeButton, data.isSleeping: ' + _data.isSleeping);
+        //     if (_data.isSleeping) {
+        //         sleepWakeButton.title = 'Wake window';
+        //         sleepWakeIcon.src = '/icons/sunny.png';
+        //         sleepWakeIcon.alt = 'Wake';
+        //     } else {
+        //         sleepWakeButton.title = 'Sleep window';
+        //         sleepWakeIcon.src = '/icons/bedtime.png';
+        //         sleepWakeIcon.alt = 'Sleep';
+        //     }
+        // }
+        // setSleepWakeButton(data);
+        // sleepWakeButton.appendChild(sleepWakeIcon);
+        // sleepWakeButton.addEventListener('click', (e) => {
+        //     e.stopPropagation();
+        //     if (data.isSleeping) {
+        //         wakeWindow(data.sleepingData, currentWindow.id);
+        //     } else {
+        //         // TODO: refresh the info about the window and tabs
+        //         sleepWindow(data);
+        //     }
+        //     data.isSleeping = !data.isSleeping;
+        //     setSleepWakeButton(data);
+        //     updateWindowInfoSpan(windowInfo, data);
+        // });
+        // buttonContainer.appendChild(sleepWakeButton);
 
         listItem.appendChild(windowInfo);
         listItem.appendChild(buttonContainer);
