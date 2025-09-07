@@ -93,55 +93,92 @@ function showWindowInfo(windowData) {
     const detailsContainer = document.querySelector('#window-details');
     const detailsContent = document.querySelector('#window-details-content');
 
-    let detailsHtml = '';
+    // Clear existing content
+    detailsContent.replaceChildren();
+
+    // Helper function to create detail rows
+    function createDetailRow(label, value) {
+        const row = document.createElement('div');
+        row.className = 'detail-row';
+
+        const labelSpan = document.createElement('span');
+        labelSpan.className = 'detail-label';
+        labelSpan.textContent = label + ':';
+
+        row.appendChild(labelSpan);
+        row.appendChild(document.createTextNode(' ' + value));
+
+        return row;
+    }
 
     // Basic window information
-    detailsHtml += `<div class="detail-row"><span class="detail-label">Title:</span> ${windowData.displayTitle}</div>`;
-    detailsHtml += `<div class="detail-row"><span class="detail-label">Status:</span> ${windowData.isSleeping ? 'Sleeping' : 'Open'}</div>`;
-    detailsHtml += `<div class="detail-row"><span class="detail-label">Tabs:</span> ${windowData.tabCount}</div>`;
+    detailsContent.appendChild(createDetailRow('Title', windowData.displayTitle));
+    detailsContent.appendChild(createDetailRow('Status', windowData.isSleeping ? 'Sleeping' : 'Open'));
+    detailsContent.appendChild(createDetailRow('Tabs', windowData.tabCount.toString()));
 
     if (windowData.isCurrentWindow) {
-        detailsHtml += `<div class="detail-row"><span class="detail-label">Current:</span> Yes</div>`;
+        detailsContent.appendChild(createDetailRow('Current', 'Yes'));
     }
 
     if (windowData.isSleeping && windowData.sleepingData) {
         if (windowData.sleepingData.sleepTime) {
             const sleepDate = new Date(windowData.sleepingData.sleepTime);
-            detailsHtml += `<div class="detail-row"><span class="detail-label">Sleep Time:</span> ${sleepDate.toLocaleString()}</div>`;
+            detailsContent.appendChild(createDetailRow('Sleep Time', sleepDate.toLocaleString()));
         }
         if (windowData.sleepingData.uuid) {
-            detailsHtml += `<div class="detail-row"><span class="detail-label">UUID:</span> ${windowData.sleepingData.uuid}</div>`;
+            detailsContent.appendChild(createDetailRow('UUID', windowData.sleepingData.uuid));
         }
     }
 
     if (!windowData.isSleeping && windowData.window) {
-        detailsHtml += `<div class="detail-row"><span class="detail-label">ID:</span> ${windowData.window.id}</div>`;
+        detailsContent.appendChild(createDetailRow('ID', windowData.window.id.toString()));
         if (windowData.window.type) {
-            detailsHtml += `<div class="detail-row"><span class="detail-label">Type:</span> ${windowData.window.type}</div>`;
+            detailsContent.appendChild(createDetailRow('Type', windowData.window.type));
         }
         if (windowData.window.state) {
-            detailsHtml += `<div class="detail-row"><span class="detail-label">State:</span> ${windowData.window.state}</div>`;
+            detailsContent.appendChild(createDetailRow('State', windowData.window.state));
         }
     }
 
     // Tabs information
     const tabs = windowData.isSleeping ? windowData.sleepingData?.tabs : windowData.window?.tabs;
     if (tabs && tabs.length > 0) {
-        detailsHtml += `<div class="detail-row"><span class="detail-label">Tabs:</span></div>`;
-        detailsHtml += `<div class="tabs-list">`;
+        const tabsHeaderRow = document.createElement('div');
+        tabsHeaderRow.className = 'detail-row';
+
+        const tabsLabel = document.createElement('span');
+        tabsLabel.className = 'detail-label';
+        tabsLabel.textContent = 'Tabs:';
+        tabsHeaderRow.appendChild(tabsLabel);
+        detailsContent.appendChild(tabsHeaderRow);
+
+        const tabsList = document.createElement('div');
+        tabsList.className = 'tabs-list';
+
         tabs.forEach((tab, index) => {
+            const tabItem = document.createElement('div');
+            tabItem.className = 'tab-item';
+
             const tabTitle = tab.title || 'Untitled';
             const tabUrl = tab.url || '';
-            detailsHtml += `<div class="tab-item">${index + 1}. ${tabTitle}`;
+
+            tabItem.textContent = `${index + 1}. ${tabTitle}`;
+
             if (tabUrl && tabUrl !== tabTitle) {
-                detailsHtml += `<br>&nbsp;&nbsp;&nbsp;<small>${tabUrl}</small>`;
+                const lineBreak = document.createElement('br');
+                tabItem.appendChild(lineBreak);
+
+                const urlText = document.createElement('small');
+                urlText.textContent = '\u00A0\u00A0\u00A0' + tabUrl;
+                tabItem.appendChild(urlText);
             }
-            detailsHtml += `</div>`;
+
+            tabsList.appendChild(tabItem);
         });
-        detailsHtml += `</div>`;
+
+        detailsContent.appendChild(tabsList);
     }
 
-    detailsContent.innerHTML = detailsHtml;
     detailsContainer.classList.add('visible');
 }
 
