@@ -1,11 +1,21 @@
 // Background script for handling window wake operations
 // Can't use ES6 imports in manifest v2 background scripts, so inline the needed functions
 
-let dataStore = null;
 
-const kitsune = import("./kitsune.js").then((kitsune) => {
-    dataStore = new kitsune.DataStore();
+// let DataStore = null;
+
+const dataStore = import("./datastore.js").then((dataStore) => {
+    console.log("background importing dataStore");
+
+    let store = dataStore.getDataStore();
+    if (!store) {
+        store = new dataStore.DataStore();
+        dataStore.setDataStore(store);
+    }
 });
+
+console.log("background module-level");
+
 
 
 async function saveTitleForWindow(windowId, title) {

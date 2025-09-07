@@ -1,6 +1,8 @@
-import {DataStore} from '/kitsune.js';
+import {getDataStore} from '/datastore.js';
 
-const dataStore = new DataStore();
+console.log("popup module-level");
+
+const dataStore = getDataStore();
 
 async function getCurrentWindowTitle() {
     const currentWindow = await window.browser.windows.getCurrent();

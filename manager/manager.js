@@ -1,6 +1,9 @@
-import {DataStore, WindowData} from '/kitsune.js';
+import {WindowData} from '/windowdata.js';
+import {getDataStore} from '/datastore.js';
 
-const dataStore = new DataStore();
+console.log("manager module-level");
+
+const dataStore = getDataStore();
 
 async function getWindowAndTabCounts() {
     const windows = await browser.windows.getAll({populate: true});
