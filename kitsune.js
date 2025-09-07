@@ -1,1 +1,1 @@
-// console.log("kitsune module-level");
+console.debug("kitsune module-level");

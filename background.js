@@ -5,7 +5,7 @@
 // let DataStore = null;
 
 const dataStore = import("./datastore.js").then((dataStore) => {
-    console.log("background importing dataStore");
+    console.debug("background importing dataStore");
 
     let store = dataStore.getDataStore();
     if (!store) {
@@ -14,7 +14,7 @@ const dataStore = import("./datastore.js").then((dataStore) => {
     }
 });
 
-console.log("background module-level");
+console.debug("background module-level");
 
 
 
@@ -48,14 +48,14 @@ async function refreshAppearanceForWindow(windowId) {
 // Listen for messages from popup
 browser.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
     if (request.action === 'wakeWindow') {
-        console.log('Background: wakeWindow request received');
+        console.debug('Background: wakeWindow request received');
 
         try {
             const { sleepingWindowData, currentWindowId } = request;
 
             // Create new window with enhanced state restoration
             const allUrls = sleepingWindowData.tabs.map(tab => tab.url);
-            console.log('Background: all URLs from sleeping window:', allUrls);
+            console.debug('Background: all URLs from sleeping window:', allUrls);
 
             // Replace privileged URLs that can't be opened by extensions with about:blank
             const processedUrls = allUrls.map(url => {
@@ -64,13 +64,13 @@ browser.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
                                !url.startsWith('moz-extension:') &&
                                !url.startsWith('resource:');
                 if (!isValid) {
-                    console.log('Background: replacing invalid URL with about:blank:', url);
+                    console.debug('Background: replacing invalid URL with about:blank:', url);
                     return 'about:blank';
                 }
                 return url;
             });
 
-            console.log('Background: creating window with processed URLs:', processedUrls);
+            console.debug('Background: creating window with processed URLs:', processedUrls);
 
             // Create window with restored properties
             const windowCreateOptions = {
@@ -91,11 +91,11 @@ browser.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
 
             const newWindow = await browser.windows.create(windowCreateOptions);
 
-            console.log('Background: window created with ID:', newWindow.id);
+            console.debug('Background: window created with ID:', newWindow.id);
 
             // Restore tab-specific properties
             if (sleepingWindowData.tabs && newWindow.tabs) {
-                console.log('Background: restoring tab properties...');
+                console.debug('Background: restoring tab properties...');
 
                 for (let i = 0; i < Math.min(sleepingWindowData.tabs.length, newWindow.tabs.length); i++) {
                     const savedTab = sleepingWindowData.tabs[i];
@@ -118,7 +118,7 @@ browser.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
                         }
 
                     } catch (tabError) {
-                        console.log('Background: error restoring tab properties:', tabError);
+                        console.error('Background: error restoring tab properties:', tabError);
                     }
                 }
             }
@@ -135,7 +135,7 @@ browser.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
             // Remove from sleeping windows
             await removeSleepingWindow(sleepingWindowData.uuid, currentWindowId);
 
-            console.log('Background: window wake completed');
+            console.debug('Background: window wake completed');
 
         } catch (error) {
             console.error('Background: error waking window:', error);
@@ -143,4 +143,4 @@ browser.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
     }
 });
 
-console.log('Background script loaded');
+console.debug('Background script loaded');

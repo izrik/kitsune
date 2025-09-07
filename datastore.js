@@ -1,16 +1,16 @@
 
 export class DataStore {
     constructor() {
-        console.log("DataStore.constructor");
+        console.debug("DataStore.constructor");
     }
     async getTitleForWindow(windowId) {
-        console.log(`getTitleForWindow(${windowId})`);
+        console.debug(`getTitleForWindow(${windowId})`);
         const windowData = await this.getWindowDataForWindow(windowId);
         return windowData?.displayTitle || '';
     }
 
     async saveTitleForWindow(windowId, title) {
-        console.log(`saveTitleForWindow("${windowId}", "${title}")`);
+        console.debug(`saveTitleForWindow("${windowId}", "${title}")`);
 
         // Get existing window data or create new one
         let windowData = await this.getWindowDataForWindow(windowId);
@@ -38,7 +38,7 @@ export class DataStore {
     }
 
     async GetUuidForWindow(windowId) {
-        console.log(`GetUuidForWindow("${windowId}")`);
+        console.debug(`GetUuidForWindow("${windowId}")`);
         if (windowId == null) {
             return null;
         }
@@ -53,19 +53,19 @@ export class DataStore {
     }
 
     async SaveUuidForWindow(windowId, uuid) {
-        console.log(`SaveUuidForWindow("${windowId}", "${uuid}")`);
+        console.debug(`SaveUuidForWindow("${windowId}", "${uuid}")`);
         await browser.sessions.setWindowValue(windowId, 'userWindowUuid', uuid);
         return uuid;
     }
 
     async getSleepingWindows() {
-        console.log(`getSleepingWindows()`);
+        console.debug(`getSleepingWindows()`);
         const sleepingWindows = await browser.storage.local.get('sleepingWindows');
         return sleepingWindows.sleepingWindows || [];
     }
 
     async saveSleepingWindow(windowData) {
-        console.log(`saveSleepingWindow("${windowData}")`);
+        console.debug(`saveSleepingWindow("${windowData}")`);
         const sleepingWindows = await this.getSleepingWindows();
 
         // Use existing UUID if present, otherwise generate a new one
@@ -84,26 +84,26 @@ export class DataStore {
     }
 
     async removeSleepingWindow(uuid, currentWindowId) {
-        console.log(`removeSleepingWindow(${uuid}, ${currentWindowId})`);
+        console.debug(`removeSleepingWindow(${uuid}, ${currentWindowId})`);
         const sleepingWindows = await this.getSleepingWindows();
         const filteredWindows = sleepingWindows.filter(w => w.uuid !== uuid);
         await browser.storage.local.set({sleepingWindows: filteredWindows});
     }
 
     async getWindowDataForWindow(windowId) {
-        console.log(`getWindowDataForWindow(${windowId})`);
+        console.debug(`getWindowDataForWindow(${windowId})`);
         const windowDataJson = await browser.sessions.getWindowValue(windowId, 'userWindowData');
         return windowDataJson ? JSON.parse(windowDataJson) : null;
     }
 
     async saveWindowDataForWindow(windowId, windowData) {
-        console.log(`saveWindowDataForWindow("${windowId}", windowData)`);
+        console.debug(`saveWindowDataForWindow("${windowId}", windowData)`);
         const windowDataJson = JSON.stringify(windowData);
         await browser.sessions.setWindowValue(windowId, 'userWindowData', windowDataJson);
     }
 
     async refreshAppearanceForWindow(windowId) {
-        console.log(`refreshAppearanceForWindow(${windowId})`);
+        console.debug(`refreshAppearanceForWindow(${windowId})`);
         const title = await this.getTitleForWindow(windowId);
         await browser.windows.update(windowId, {titlePreface: `[${title}] `});
     }
@@ -123,7 +123,7 @@ export class DataStore {
     async SetWindowDatas(windowDatas) {
         let fs = [];
         for (const wd of windowDatas) {
-            console.log(`DataStore.SetWindowDatas: ${wd.uuid} ${wd}`);
+            console.debug(`DataStore.SetWindowDatas: ${wd.uuid} ${wd}`);
             const f = dataStore.SetWindowDataForUuid(wd.uuid, wd);
             fs.push(f);
         }
@@ -141,27 +141,27 @@ export class DataStore {
 let dataStore = null;
 
 export function getDataStore() {
-    console.log(`getDataStore()`);
+    console.debug(`getDataStore()`);
     if (dataStore) {
-        console.log(`getDataStore(): dataStore already exists`);
+        console.debug(`getDataStore(): dataStore already exists`);
     } else {
-        console.log(`getDataStore(): creating new dataStore`);
+        console.debug(`getDataStore(): creating new dataStore`);
         dataStore = new DataStore();
     }
     return dataStore;
 }
 
 export function setDataStore(value) {
-    console.log(`setDataStore()`);
+    console.debug(`setDataStore()`);
     if (dataStore) {
-        console.log(`setDataStore(): dataStore already exists. global not set.`);
+        console.debug(`setDataStore(): dataStore already exists. global not set.`);
     } else {
-        console.log(`setDataStore(): setting dataStore global variable`);
+        console.debug(`setDataStore(): setting dataStore global variable`);
         dataStore = value;
     }
 }
 
 export function createDataStore(value) {
-    console.log(`createDataStore()`);
+    console.debug(`createDataStore()`);
 
 }

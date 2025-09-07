@@ -1,7 +1,7 @@
 import {WindowData} from '/windowdata.js';
 import {getDataStore} from '/datastore.js';
 
-console.log("manager module-level");
+console.debug("manager module-level");
 
 const dataStore = getDataStore();
 
@@ -56,7 +56,7 @@ async function sleepWindow(windowData) {
         // Close the window
         await browser.windows.remove(windowData.window.id);
 
-        console.log('Window put to sleep with UUID:', uuid, 'Title:', windowData.displayTitle);
+        console.debug('Window put to sleep with UUID:', uuid, 'Title:', windowData.displayTitle);
 
         // Refresh the window
         await refreshManager();
@@ -68,10 +68,10 @@ async function sleepWindow(windowData) {
 
 async function wakeWindow(sleepingWindowData, currentWindowId) {
     try {
-        console.log(`wakeWindow(${sleepingWindowData} -> {uuid: ${sleepingWindowData.uuid}, title: ${sleepingWindowData.title}, tabs: ${sleepingWindowData.tabs}, sleepTime: ${sleepingWindowData.sleepTime})`);
+        console.debug(`wakeWindow(${sleepingWindowData} -> {uuid: ${sleepingWindowData.uuid}, title: ${sleepingWindowData.title}, tabs: ${sleepingWindowData.tabs}, sleepTime: ${sleepingWindowData.sleepTime})`);
 
         // Send message to background script to handle window creation
-        console.log('wakeWindow, sending message to background script...');
+        console.debug('wakeWindow, sending message to background script...');
 
         // Send message without waiting for response to avoid context issues
         browser.runtime.sendMessage({
@@ -79,10 +79,10 @@ async function wakeWindow(sleepingWindowData, currentWindowId) {
             sleepingWindowData: sleepingWindowData,
             currentWindowId: currentWindowId
         }).catch(error => {
-            console.log('Message sending failed, but background should still handle it:', error);
+            console.error('Message sending failed, but background should still handle it:', error);
         });
 
-        console.log('wakeWindow, message sent to background script');
+        console.debug('wakeWindow, message sent to background script');
 
     } catch (error) {
         console.error('Error waking window:', error);
@@ -163,11 +163,11 @@ async function populateWindowsList() {
 
     // Get stored window data
     const windowDatas = await dataStore.GetWindowDatas();
-    console.log(windowDatas.length + " starting window datas");
+    console.debug(windowDatas.length + " starting window datas");
 
     // Add open windows
     const windows = await browser.windows.getAll({populate: true});
-    console.log(windows.length + " open windows");
+    console.debug(windows.length + " open windows");
     for (const window of windows) {
         const uuid = await dataStore.GetUuidForWindow(window.id);
         let wd = await dataStore.GetWindowDataByUuid(uuid);
@@ -198,7 +198,7 @@ async function populateWindowsList() {
     }
 
     // Add sleeping windows
-    console.log(sleepingWindows.length + " sleeping windows");
+    console.debug(sleepingWindows.length + " sleeping windows");
     for (const sleepingWindow of sleepingWindows) {
         windowDatas.push(new WindowData({
             window: null,
@@ -213,7 +213,7 @@ async function populateWindowsList() {
     await dataStore.SetWindowDatas(windowDatas);
 
     // Sort alphabetically by title, then by tab count (numeric)
-    console.log("window datas before sorting: " + windowDatas);
+    console.debug("window datas before sorting: " + windowDatas);
     windowDatas.sort((a, b) => {
         const titleComparison = a.displayTitle.localeCompare(b.displayTitle);
         if (titleComparison !== 0) {
@@ -222,7 +222,7 @@ async function populateWindowsList() {
         return a.tabCount - b.tabCount;
     });
 
-    console.log(windowDatas.length + " window datas");
+    console.debug(windowDatas.length + " window datas");
     const updateWindowInfoSpan = function (windowInfo, data) {
         windowInfo.className = 'window-info';
         const currentMarker = data.isCurrentWindow ? ' (current)' : '';
@@ -233,7 +233,7 @@ async function populateWindowsList() {
             windowInfo.style.fontWeight = 'bold';
         } else {
             windowInfo.style.fontWeight = null;
-            // console.log("isCurrentWindow font weight: " + windowInfo.style.fontWeight)
+            console.debug("isCurrentWindow font weight: " + windowInfo.style.fontWeight)
         }
 
         if (data.isSleeping) {
@@ -242,8 +242,8 @@ async function populateWindowsList() {
         } else {
             windowInfo.style.fontStyle = null;
             windowInfo.style.color = null;
-            // console.log("isSleeping font style: " + windowInfo.style.fontStyle)
-            // console.log("isSleeping font color: " + windowInfo.style.color)
+            console.debug("isSleeping font style: " + windowInfo.style.fontStyle)
+            console.debug("isSleeping font color: " + windowInfo.style.color)
         }
     }
 
@@ -280,7 +280,7 @@ async function populateWindowsList() {
         sleepWakeButton.className = 'window-btn';
         const sleepWakeIcon = document.createElement('img');
         const setSleepWakeButton = function (_data) {
-            console.log('setSleepWakeButton, data.isSleeping: ' + _data.isSleeping);
+            console.debug('setSleepWakeButton, data.isSleeping: ' + _data.isSleeping);
             if (_data.isSleeping) {
                 sleepWakeButton.title = 'Wake window';
                 sleepWakeIcon.src = '/icons/sunny.png';
@@ -315,15 +315,15 @@ async function populateWindowsList() {
 
 async function exportWindowsData() {
     try {
-        console.log('exportWindowsData: Starting export...');
+        console.debug('exportWindowsData: Starting export...');
 
         // Get all open windows
         const windows = await browser.windows.getAll({populate: true});
-        console.log('exportWindowsData: Got open windows:', windows.length);
+        console.debug('exportWindowsData: Got open windows:', windows.length);
 
         // Get sleeping windows
         const sleepingWindows = await dataStore.getSleepingWindows();
-        console.log('exportWindowsData: Got sleeping windows:', sleepingWindows.length);
+        console.debug('exportWindowsData: Got sleeping windows:', sleepingWindows.length);
 
         const exportData = {
             timestamp: new Date().toISOString(),
@@ -361,7 +361,7 @@ async function exportWindowsData() {
             exportData.sleepingWindows.push(windowData);
         }
 
-        console.log('exportWindowsData: Prepared export data');
+        console.debug('exportWindowsData: Prepared export data');
 
         // Create and download JSON file
         const jsonString = JSON.stringify(exportData, null, 2);
@@ -382,7 +382,7 @@ async function exportWindowsData() {
         // Clean up
         URL.revokeObjectURL(url);
 
-        console.log('exportWindowsData: Export completed');
+        console.debug('exportWindowsData: Export completed');
 
     } catch (error) {
         console.error('exportWindowsData: Error during export:', error);
