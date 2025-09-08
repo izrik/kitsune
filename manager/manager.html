@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Kitsune pop-up page</title>
+    <meta charset="utf-8"/>
+    <style>
+        #windows-list-items {
+            max-height: 150px;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            padding: 8px;
+            margin: 0;
+            background-color: #f9f9f9;
+        }
+
+        #windows-list-items li {
+            margin: 4px 0;
+            padding: 2px;
+            list-style-type: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .window-info {
+            flex: 1;
+        }
+
+        .window-buttons {
+            display: flex;
+            gap: 4px;
+            margin-left: 8px;
+        }
+
+        .window-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 2px;
+            display: flex;
+            align-items: center;
+        }
+
+        .window-btn img {
+            width: 16px;
+            height: 16px;
+        }
+
+        .window-btn:hover {
+            background-color: #e0e0e0;
+            border-radius: 2px;
+        }
+
+        body {
+            min-width: 300px;
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+        }
+
+        #window-details {
+            margin-top: 10px;
+            padding: 8px;
+            border: 1px solid #ccc;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+            display: none;
+        }
+
+        #window-details.visible {
+            display: block;
+        }
+
+        #window-details h4 {
+            margin: 0 0 8px 0;
+            color: #333;
+        }
+
+        #window-details-content {
+            font-size: 11px;
+        }
+
+        .detail-row {
+            margin-bottom: 4px;
+        }
+
+        .detail-label {
+            font-weight: bold;
+            display: inline-block;
+            min-width: 60px;
+        }
+
+        .tabs-list {
+            max-height: 100px;
+            overflow-y: auto;
+            margin-top: 4px;
+            padding-left: 16px;
+        }
+
+        .tab-item {
+            margin-bottom: 2px;
+            font-size: 10px;
+        }
+    </style>
+</head>
+<body>
+<div id="stats">
+    <p>Windows: <span id="window-count">-</span> | Total tabs: <span id="total-tab-count">-</span> | Current window tabs: <span id="current-window-tab-count">-</span></p>
+</div>
+<div id="windows-list">
+    <h3>Open Windows:</h3>
+    <ul id="windows-list-items"></ul>
+</div>
+<div id="window-details">
+    <h4>Window Details</h4>
+    <div id="window-details-content"></div>
+</div>
+<hr/>
+<div id="export-section">
+    <button id="export-button">Export Windows Data</button>
+</div>
+<div id="minimize-all-windows-section">
+    <button id="minimize-all-windows-button">Minimize All Windows</button>
+</div>
+<script async src="manager.js" type="module"></script>
+</body>
+</html>
