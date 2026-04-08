@@ -5,6 +5,30 @@ console.debug("manager module-level");
 
 const dataStore = getDataStore();
 
+let sortColumn = 'title';
+let sortDirection = 'asc';
+
+function updateSortHeaders() {
+    for (const col of ['title', 'tabs', 'status']) {
+        const th = document.querySelector(`#sort-${col}`);
+        const label = col.charAt(0).toUpperCase() + col.slice(1);
+        th.textContent = sortColumn === col
+            ? label + (sortDirection === 'asc' ? ' ↑' : ' ↓')
+            : label;
+    }
+}
+
+function setSort(column) {
+    if (sortColumn === column) {
+        sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+        sortColumn = column;
+        sortDirection = 'asc';
+    }
+    updateSortHeaders();
+    populateWindowsList();
+}
+
 async function getWindowAndTabCounts() {
     const windows = await browser.windows.getAll({populate: true});
     const currentWindow = await browser.windows.getCurrent({populate: true});
@@ -194,9 +218,9 @@ async function refreshManager() {
 async function populateWindowsList() {
     const currentWindow = await browser.windows.getCurrent();
     const sleepingWindows = await dataStore.getSleepingWindows();
-    const windowsListItems = document.querySelector('#windows-list-items');
+    const windowsTableBody = document.querySelector('#windows-table-body');
 
-    windowsListItems.innerHTML = '';
+    windowsTableBody.replaceChildren();
 
     // Get stored window data
     const windowDatas = await dataStore.GetWindowDatas();
@@ -249,104 +273,59 @@ async function populateWindowsList() {
 
     await dataStore.SetWindowDatas(windowDatas);
 
-    // Sort alphabetically by title, then by tab count (numeric)
-    console.debug("window datas before sorting: " + windowDatas);
     windowDatas.sort((a, b) => {
-        const titleComparison = a.displayTitle.localeCompare(b.displayTitle);
-        if (titleComparison !== 0) {
-            return titleComparison;
+        let cmp = 0;
+        if (sortColumn === 'title') {
+            cmp = a.displayTitle.localeCompare(b.displayTitle);
+        } else if (sortColumn === 'tabs') {
+            cmp = a.tabCount - b.tabCount;
+        } else if (sortColumn === 'status') {
+            const statusValue = d => d.isSleeping ? 2 : d.isCurrentWindow ? 0 : 1;
+            cmp = statusValue(a) - statusValue(b);
         }
-        return a.tabCount - b.tabCount;
+        return sortDirection === 'asc' ? cmp : -cmp;
     });
 
     console.debug(windowDatas.length + " window datas");
-    const updateWindowInfoSpan = function (windowInfo, data) {
-        windowInfo.className = 'window-info';
-        const currentMarker = data.isCurrentWindow ? ' (current)' : '';
-        const sleepMarker = data.isSleeping ? ' (sleeping)' : '';
-        windowInfo.textContent = `${data.displayTitle}: ${data.tabCount} tab${data.tabCount !== 1 ? 's' : ''}${currentMarker}${sleepMarker}`;
 
-        if (data.isCurrentWindow) {
-            windowInfo.style.fontWeight = 'bold';
-        } else {
-            windowInfo.style.fontWeight = null;
-            console.debug("isCurrentWindow font weight: " + windowInfo.style.fontWeight)
-        }
-
-        if (data.isSleeping) {
-            windowInfo.style.fontStyle = 'italic';
-            windowInfo.style.color = '#666';
-        } else {
-            windowInfo.style.fontStyle = null;
-            windowInfo.style.color = null;
-            console.debug("isSleeping font style: " + windowInfo.style.fontStyle)
-            console.debug("isSleeping font color: " + windowInfo.style.color)
-        }
-    }
-
-    // Create and append list items
     for (const data of windowDatas) {
+        const row = document.createElement('tr');
 
-        const listItem = document.createElement('li');
+        const titleCell = document.createElement('td');
+        titleCell.textContent = data.displayTitle;
+        if (data.isCurrentWindow) titleCell.style.fontWeight = 'bold';
+        row.appendChild(titleCell);
 
-        // Create window info span
-        const windowInfo = document.createElement('span');
-        updateWindowInfoSpan(windowInfo, data);
+        const tabsCell = document.createElement('td');
+        tabsCell.textContent = data.tabCount;
+        row.appendChild(tabsCell);
 
-        // Create button container
-        const buttonContainer = document.createElement('div');
-        buttonContainer.className = 'window-buttons';
+        const statusCell = document.createElement('td');
+        if (data.isSleeping) {
+            statusCell.textContent = 'Sleeping';
+            statusCell.style.fontStyle = 'italic';
+            statusCell.style.color = '#666';
+        } else {
+            statusCell.textContent = data.isCurrentWindow ? 'Current' : 'Open';
+        }
+        row.appendChild(statusCell);
 
-        // Add info button for all windows
+        const actionsCell = document.createElement('td');
         const infoButton = document.createElement('button');
         infoButton.className = 'window-btn';
         infoButton.title = 'Show window details';
-
         const infoIcon = document.createElement('img');
         infoIcon.src = '/icons/read_more.png';
         infoIcon.alt = 'Info';
-
         infoButton.appendChild(infoIcon);
         infoButton.addEventListener('click', (e) => {
             e.stopPropagation();
             showWindowInfo(data);
         });
-        buttonContainer.appendChild(infoButton);
+        actionsCell.appendChild(infoButton);
+        row.appendChild(actionsCell);
 
-        // const sleepWakeButton = document.createElement('button');
-        // sleepWakeButton.className = 'window-btn';
-        // const sleepWakeIcon = document.createElement('img');
-        // const setSleepWakeButton = function (_data) {
-        //     console.debug('setSleepWakeButton, data.isSleeping: ' + _data.isSleeping);
-        //     if (_data.isSleeping) {
-        //         sleepWakeButton.title = 'Wake window';
-        //         sleepWakeIcon.src = '/icons/sunny.png';
-        //         sleepWakeIcon.alt = 'Wake';
-        //     } else {
-        //         sleepWakeButton.title = 'Sleep window';
-        //         sleepWakeIcon.src = '/icons/bedtime.png';
-        //         sleepWakeIcon.alt = 'Sleep';
-        //     }
-        // }
-        // setSleepWakeButton(data);
-        // sleepWakeButton.appendChild(sleepWakeIcon);
-        // sleepWakeButton.addEventListener('click', (e) => {
-        //     e.stopPropagation();
-        //     if (data.isSleeping) {
-        //         wakeWindow(data.sleepingData, currentWindow.id);
-        //     } else {
-        //         // TODO: refresh the info about the window and tabs
-        //         sleepWindow(data);
-        //     }
-        //     data.isSleeping = !data.isSleeping;
-        //     setSleepWakeButton(data);
-        //     updateWindowInfoSpan(windowInfo, data);
-        // });
-        // buttonContainer.appendChild(sleepWakeButton);
-
-        listItem.appendChild(windowInfo);
-        listItem.appendChild(buttonContainer);
-        windowsListItems.appendChild(listItem);
+        windowsTableBody.appendChild(row);
     }
 }
 
@@ -437,10 +416,13 @@ async function minimizeAllWindows() {
 }
 
 window.onload = async () => {
+    document.querySelector('#sort-title').addEventListener('click', () => setSort('title'));
+    document.querySelector('#sort-tabs').addEventListener('click', () => setSort('tabs'));
+    document.querySelector('#sort-status').addEventListener('click', () => setSort('status'));
 
+    updateSortHeaders();
     await refreshManager();
 
-    // Add export button click handler
     document.querySelector('#export-button').addEventListener('click', exportWindowsData);
     document.querySelector('#minimize-all-windows-button').addEventListener('click', minimizeAllWindows);
 };
