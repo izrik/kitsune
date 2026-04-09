@@ -4,32 +4,59 @@
     <title>Kitsune pop-up page</title>
     <meta charset="utf-8"/>
     <style>
-        #windows-list-items {
-            max-height: 150px;
+        #windows-table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: #f9f9f9;
+            border: 1px solid #ccc;
+        }
+
+        #windows-table thead {
+            position: sticky;
+            top: 0;
+            background-color: #e8e8e8;
+        }
+
+        #windows-table th {
+            padding: 4px 8px;
+            text-align: left;
+            border-bottom: 2px solid #ccc;
+            white-space: nowrap;
+        }
+
+        #windows-table th.sortable {
+            cursor: pointer;
+            user-select: none;
+        }
+
+        #windows-table th.sortable:hover {
+            background-color: #d8d8d8;
+        }
+
+        #windows-table td {
+            padding: 3px 8px;
+            border-bottom: 1px solid #e0e0e0;
+            vertical-align: middle;
+        }
+
+        #windows-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        #windows-table tbody tr:hover {
+            background-color: #eef;
+        }
+
+        #windows-table th:nth-child(n+2),
+        #windows-table td:nth-child(n+2) {
+            width: 1px;
+            white-space: nowrap;
+        }
+
+        #windows-table-wrapper {
+            max-height: 300px;
             overflow-y: auto;
             border: 1px solid #ccc;
-            padding: 8px;
-            margin: 0;
-            background-color: #f9f9f9;
-        }
-
-        #windows-list-items li {
-            margin: 4px 0;
-            padding: 2px;
-            list-style-type: none;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .window-info {
-            flex: 1;
-        }
-
-        .window-buttons {
-            display: flex;
-            gap: 4px;
-            margin-left: 8px;
         }
 
         .window-btn {
@@ -107,8 +134,20 @@
     <p>Windows: <span id="window-count">-</span> | Total tabs: <span id="total-tab-count">-</span> | Current window tabs: <span id="current-window-tab-count">-</span></p>
 </div>
 <div id="windows-list">
-    <h3>Open Windows:</h3>
-    <ul id="windows-list-items"></ul>
+    <h3>Windows</h3>
+    <div id="windows-table-wrapper">
+        <table id="windows-table">
+            <thead>
+                <tr>
+                    <th id="sort-title" class="sortable">Title</th>
+                    <th id="sort-tabs" class="sortable">Tabs</th>
+                    <th id="sort-status" class="sortable">Status</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="windows-table-body"></tbody>
+        </table>
+    </div>
 </div>
 <div id="window-details">
     <h4>Window Details</h4>
