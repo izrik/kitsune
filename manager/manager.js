@@ -172,7 +172,7 @@ function showWindowInfo(windowData) {
 
         const thead = document.createElement('thead');
         const headerRow = document.createElement('tr');
-        for (const heading of ['#', 'Title', 'URL', '']) {
+        for (const heading of ['#', 'Title', 'URL', 'Loaded', '']) {
             const th = document.createElement('th');
             th.textContent = heading;
             headerRow.appendChild(th);
@@ -195,6 +195,12 @@ function showWindowInfo(windowData) {
             const urlCell = document.createElement('td');
             urlCell.textContent = tab.url || '';
             row.appendChild(urlCell);
+
+            const loadedCell = document.createElement('td');
+            if (!windowData.isSleeping) {
+                loadedCell.textContent = tab.discarded ? 'No' : 'Yes';
+            }
+            row.appendChild(loadedCell);
 
             const actionsCell = document.createElement('td');
             if (!windowData.isSleeping && !tab.active) {
