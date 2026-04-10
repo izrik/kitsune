@@ -172,7 +172,7 @@ function showWindowInfo(windowData) {
 
         const thead = document.createElement('thead');
         const headerRow = document.createElement('tr');
-        for (const heading of ['#', 'Title', 'URL']) {
+        for (const heading of ['#', 'Title', 'URL', '']) {
             const th = document.createElement('th');
             th.textContent = heading;
             headerRow.appendChild(th);
@@ -195,6 +195,20 @@ function showWindowInfo(windowData) {
             const urlCell = document.createElement('td');
             urlCell.textContent = tab.url || '';
             row.appendChild(urlCell);
+
+            const actionsCell = document.createElement('td');
+            if (!windowData.isSleeping && !tab.active) {
+                const unloadBtn = document.createElement('button');
+                unloadBtn.className = 'window-btn';
+                unloadBtn.title = 'Unload tab';
+                const icon = document.createElement('img');
+                icon.src = '/icons/bedtime.png';
+                icon.alt = 'Unload tab';
+                unloadBtn.appendChild(icon);
+                unloadBtn.addEventListener('click', () => browser.tabs.discard(tab.id));
+                actionsCell.appendChild(unloadBtn);
+            }
+            row.appendChild(actionsCell);
 
             tbody.appendChild(row);
         });
