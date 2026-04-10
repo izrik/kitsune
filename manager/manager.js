@@ -323,6 +323,22 @@ async function populateWindowsList() {
             showWindowInfo(data);
         });
         actionsCell.appendChild(infoButton);
+
+        if (!data.isSleeping) {
+            const unloadButton = document.createElement('button');
+            unloadButton.className = 'window-btn';
+            unloadButton.title = 'Unload all tabs';
+            const unloadIcon = document.createElement('img');
+            unloadIcon.src = '/icons/bedtime.png';
+            unloadIcon.alt = 'Unload all tabs';
+            unloadButton.appendChild(unloadIcon);
+            unloadButton.addEventListener('click', (e) => {
+                e.stopPropagation();
+                unloadAllTabsInWindow(data.window.id);
+            });
+            actionsCell.appendChild(unloadButton);
+        }
+
         row.appendChild(actionsCell);
 
         windowsTableBody.appendChild(row);
@@ -404,6 +420,17 @@ async function exportWindowsData() {
         console.error('exportWindowsData: Error during export:', error);
         alert('Error exporting windows data: ' + error.message);
     }
+}
+
+async function unloadAllTabsInWindow(windowId) {
+    const confirmed = confirm(
+        'Unloading tabs will discard any unsaved changes (such as text entered in forms).\n\nContinue?'
+    );
+    if (!confirmed) return;
+
+    const win = await browser.windows.get(windowId, {populate: true});
+    const backgroundTabs = win.tabs.filter(tab => !tab.active);
+    await browser.tabs.discard(backgroundTabs.map(tab => tab.id));
 }
 
 async function minimizeAllWindows() {
