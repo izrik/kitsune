@@ -304,6 +304,8 @@ async function populateWindowsList() {
 
     for (const data of windowDatas) {
         const row = document.createElement('tr');
+        row.style.cursor = 'pointer';
+        row.addEventListener('click', () => showWindowInfo(data));
 
         const titleCell = document.createElement('td');
         titleCell.textContent = data.displayTitle;
@@ -325,18 +327,6 @@ async function populateWindowsList() {
         row.appendChild(statusCell);
 
         const actionsCell = document.createElement('td');
-        const infoButton = document.createElement('button');
-        infoButton.className = 'window-btn';
-        infoButton.title = 'Show window details';
-        const infoIcon = document.createElement('img');
-        infoIcon.src = '/icons/read_more.png';
-        infoIcon.alt = 'Info';
-        infoButton.appendChild(infoIcon);
-        infoButton.addEventListener('click', (e) => {
-            e.stopPropagation();
-            showWindowInfo(data);
-        });
-        actionsCell.appendChild(infoButton);
 
         if (!data.isSleeping) {
             const unloadButton = document.createElement('button');
