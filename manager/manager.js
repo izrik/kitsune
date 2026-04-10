@@ -167,40 +167,60 @@ function showWindowInfo(windowData) {
     // Tabs information
     const tabs = windowData.isSleeping ? windowData.sleepingData?.tabs : windowData.window?.tabs;
     if (tabs && tabs.length > 0) {
-        const tabsHeaderRow = document.createElement('div');
-        tabsHeaderRow.className = 'detail-row';
+        const tabsTable = document.createElement('table');
+        tabsTable.className = 'tabs-table';
 
-        const tabsLabel = document.createElement('span');
-        tabsLabel.className = 'detail-label';
-        tabsLabel.textContent = 'Tabs:';
-        tabsHeaderRow.appendChild(tabsLabel);
-        detailsContent.appendChild(tabsHeaderRow);
+        const thead = document.createElement('thead');
+        const headerRow = document.createElement('tr');
+        for (const heading of ['#', 'Title', 'URL', 'Loaded', '']) {
+            const th = document.createElement('th');
+            th.textContent = heading;
+            headerRow.appendChild(th);
+        }
+        thead.appendChild(headerRow);
+        tabsTable.appendChild(thead);
 
-        const tabsList = document.createElement('div');
-        tabsList.className = 'tabs-list';
-
+        const tbody = document.createElement('tbody');
         tabs.forEach((tab, index) => {
-            const tabItem = document.createElement('div');
-            tabItem.className = 'tab-item';
+            const row = document.createElement('tr');
 
-            const tabTitle = tab.title || 'Untitled';
-            const tabUrl = tab.url || '';
+            const indexCell = document.createElement('td');
+            indexCell.textContent = index + 1;
+            row.appendChild(indexCell);
 
-            tabItem.textContent = `${index + 1}. ${tabTitle}`;
+            const titleCell = document.createElement('td');
+            titleCell.textContent = tab.title || 'Untitled';
+            row.appendChild(titleCell);
 
-            if (tabUrl && tabUrl !== tabTitle) {
-                const lineBreak = document.createElement('br');
-                tabItem.appendChild(lineBreak);
+            const urlCell = document.createElement('td');
+            urlCell.textContent = tab.url || '';
+            row.appendChild(urlCell);
 
-                const urlText = document.createElement('small');
-                urlText.textContent = '\u00A0\u00A0\u00A0' + tabUrl;
-                tabItem.appendChild(urlText);
+            const loadedCell = document.createElement('td');
+            if (!windowData.isSleeping) {
+                loadedCell.textContent = tab.discarded ? 'No' : 'Yes';
             }
+            row.appendChild(loadedCell);
 
-            tabsList.appendChild(tabItem);
+            const actionsCell = document.createElement('td');
+            if (!windowData.isSleeping && !tab.active) {
+                const unloadBtn = document.createElement('button');
+                unloadBtn.className = 'window-btn';
+                unloadBtn.title = 'Unload tab';
+                const icon = document.createElement('img');
+                icon.src = '/icons/bedtime.png';
+                icon.alt = 'Unload tab';
+                unloadBtn.appendChild(icon);
+                unloadBtn.addEventListener('click', () => browser.tabs.discard(tab.id));
+                actionsCell.appendChild(unloadBtn);
+            }
+            row.appendChild(actionsCell);
+
+            tbody.appendChild(row);
         });
+        tabsTable.appendChild(tbody);
 
-        detailsContent.appendChild(tabsList);
+        detailsContent.appendChild(tabsTable);
     }
 
     detailsContainer.classList.add('visible');
@@ -290,6 +310,8 @@ async function populateWindowsList() {
 
     for (const data of windowDatas) {
         const row = document.createElement('tr');
+        row.style.cursor = 'pointer';
+        row.addEventListener('click', () => showWindowInfo(data));
 
         const titleCell = document.createElement('td');
         titleCell.textContent = data.displayTitle;
@@ -311,18 +333,22 @@ async function populateWindowsList() {
         row.appendChild(statusCell);
 
         const actionsCell = document.createElement('td');
-        const infoButton = document.createElement('button');
-        infoButton.className = 'window-btn';
-        infoButton.title = 'Show window details';
-        const infoIcon = document.createElement('img');
-        infoIcon.src = '/icons/read_more.png';
-        infoIcon.alt = 'Info';
-        infoButton.appendChild(infoIcon);
-        infoButton.addEventListener('click', (e) => {
-            e.stopPropagation();
-            showWindowInfo(data);
-        });
-        actionsCell.appendChild(infoButton);
+
+        if (!data.isSleeping) {
+            const unloadButton = document.createElement('button');
+            unloadButton.className = 'window-btn';
+            unloadButton.title = 'Unload all tabs';
+            const unloadIcon = document.createElement('img');
+            unloadIcon.src = '/icons/bedtime.png';
+            unloadIcon.alt = 'Unload all tabs';
+            unloadButton.appendChild(unloadIcon);
+            unloadButton.addEventListener('click', (e) => {
+                e.stopPropagation();
+                unloadAllTabsInWindow(data.window.id);
+            });
+            actionsCell.appendChild(unloadButton);
+        }
+
         row.appendChild(actionsCell);
 
         windowsTableBody.appendChild(row);
@@ -406,6 +432,33 @@ async function exportWindowsData() {
     }
 }
 
+async function unloadAllTabsInWindow(windowId) {
+    const confirmed = confirm(
+        'Unloading tabs will discard any unsaved changes (such as text entered in forms).\n\nContinue?'
+    );
+    if (!confirmed) return;
+
+    const win = await browser.windows.get(windowId, {populate: true});
+    const backgroundTabs = win.tabs.filter(tab => !tab.active);
+    await browser.tabs.discard(backgroundTabs.map(tab => tab.id));
+}
+
+async function unloadAllTabs() {
+    const confirmed = confirm(
+        'Unloading tabs will discard any unsaved changes (such as text entered in forms).\n\nContinue?'
+    );
+    if (!confirmed) return;
+
+    const windows = await browser.windows.getAll({populate: true});
+    const tabIds = [];
+    for (const win of windows) {
+        for (const tab of win.tabs) {
+            if (!tab.active) tabIds.push(tab.id);
+        }
+    }
+    await browser.tabs.discard(tabIds);
+}
+
 async function minimizeAllWindows() {
     const windows = await browser.windows.getAll();
 
@@ -425,4 +478,5 @@ window.onload = async () => {
 
     document.querySelector('#export-button').addEventListener('click', exportWindowsData);
     document.querySelector('#minimize-all-windows-button').addEventListener('click', minimizeAllWindows);
+    document.querySelector('#unload-all-tabs-button').addEventListener('click', unloadAllTabs);
 };
