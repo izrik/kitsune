@@ -437,6 +437,22 @@ async function unloadAllTabsInWindow(windowId) {
     await browser.tabs.discard(backgroundTabs.map(tab => tab.id));
 }
 
+async function unloadAllTabs() {
+    const confirmed = confirm(
+        'Unloading tabs will discard any unsaved changes (such as text entered in forms).\n\nContinue?'
+    );
+    if (!confirmed) return;
+
+    const windows = await browser.windows.getAll({populate: true});
+    const tabIds = [];
+    for (const win of windows) {
+        for (const tab of win.tabs) {
+            if (!tab.active) tabIds.push(tab.id);
+        }
+    }
+    await browser.tabs.discard(tabIds);
+}
+
 async function minimizeAllWindows() {
     const windows = await browser.windows.getAll();
 
@@ -456,4 +472,5 @@ window.onload = async () => {
 
     document.querySelector('#export-button').addEventListener('click', exportWindowsData);
     document.querySelector('#minimize-all-windows-button').addEventListener('click', minimizeAllWindows);
+    document.querySelector('#unload-all-tabs-button').addEventListener('click', unloadAllTabs);
 };
