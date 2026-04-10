@@ -5,7 +5,7 @@
   "description": "Manages tabs and windows",
   "homepage_url": "https://github.com/izrik/kitsune",
   "icons": {
-    "48": "icons/kitsune_think.svg",
+    "48": "icons/kitsune_thick.svg",
     "96": "icons/kitsune_thick.svg"
   },
 
@@ -22,7 +22,7 @@
   },
 
   "browser_action": {
-    "default_icon": "icons/kitsune_thinck.svg",
+    "default_icon": "icons/kitsune_thick.svg",
     "default_title": "Kitsune",
     "default_popup": "popup/popup.html"
   },
