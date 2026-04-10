@@ -116,16 +116,43 @@
             min-width: 60px;
         }
 
-        .tabs-list {
-            max-height: 100px;
-            overflow-y: auto;
+        .tabs-table {
+            width: 100%;
+            border-collapse: collapse;
             margin-top: 4px;
-            padding-left: 16px;
+            font-size: 10px;
+            max-height: 150px;
+            display: block;
+            overflow-y: auto;
         }
 
-        .tab-item {
-            margin-bottom: 2px;
-            font-size: 10px;
+        .tabs-table thead {
+            position: sticky;
+            top: 0;
+            background-color: #e8e8e8;
+        }
+
+        .tabs-table th {
+            padding: 2px 6px;
+            text-align: left;
+            border-bottom: 1px solid #ccc;
+            white-space: nowrap;
+        }
+
+        .tabs-table td {
+            padding: 2px 6px;
+            border-bottom: 1px solid #eee;
+            vertical-align: top;
+        }
+
+        .tabs-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .tabs-table th:first-child,
+        .tabs-table td:first-child {
+            width: 1px;
+            white-space: nowrap;
         }
     </style>
 </head>
