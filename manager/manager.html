@@ -121,14 +121,9 @@
             border-collapse: collapse;
             margin-top: 4px;
             font-size: 10px;
-            max-height: 150px;
-            display: block;
-            overflow-y: auto;
         }
 
         .tabs-table thead {
-            position: sticky;
-            top: 0;
             background-color: #e8e8e8;
         }
 
@@ -143,6 +138,7 @@
             padding: 2px 6px;
             border-bottom: 1px solid #eee;
             vertical-align: top;
+            word-break: break-all;
         }
 
         .tabs-table tbody tr:last-child td {
@@ -159,6 +155,14 @@
         .tabs-table td:nth-child(n+4) {
             width: 1px;
             white-space: nowrap;
+        }
+
+        .tabs-table th:nth-child(2),
+        .tabs-table td:nth-child(2) {
+            white-space: nowrap;
+            max-width: 50em;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
     </style>
 </head>
