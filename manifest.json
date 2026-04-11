@@ -1,12 +1,12 @@
 {
   "manifest_version": 2,
   "name": "Kitsune",
-  "version": "0.1",
+  "version": "0.2",
   "description": "Manages tabs and windows",
   "homepage_url": "https://github.com/izrik/kitsune",
   "icons": {
-    "48": "icons/kitsune_icon.svg",
-    "96": "icons/kitsune_icon.svg"
+    "48": "icons/kitsune_thick.svg",
+    "96": "icons/kitsune_thick.svg"
   },
 
   "permissions": [
@@ -22,7 +22,7 @@
   },
 
   "browser_action": {
-    "default_icon": "icons/kitsune_icon.svg",
+    "default_icon": "icons/kitsune_thick.svg",
     "default_title": "Kitsune",
     "default_popup": "popup/popup.html"
   },

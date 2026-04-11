@@ -135,3 +135,4 @@ dist
 .opencode
 kitsune-windows-*.json
 web-ext-artifacts/
+.amo-upload-uuid
