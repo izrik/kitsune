@@ -32,11 +32,9 @@ function setSort(column) {
 async function getWindowAndTabCounts() {
     const windows = await browser.windows.getAll({populate: true});
     const currentWindow = await browser.windows.getCurrent({populate: true});
-    const sleepingWindows = await dataStore.getSleepingWindows();
 
-    const totalWindows = windows.length + sleepingWindows.length;
-    const totalTabs = windows.reduce((sum, window) => sum + window.tabs.length, 0) +
-                     sleepingWindows.reduce((sum, window) => sum + window.tabs.length, 0);
+    const totalWindows = windows.length;
+    const totalTabs = windows.reduce((sum, window) => sum + window.tabs.length, 0);
     const currentWindowTabs = currentWindow.tabs.length;
 
     return {
@@ -44,73 +42,6 @@ async function getWindowAndTabCounts() {
         totalTabs,
         currentWindowTabs
     };
-}
-
-async function sleepWindow(windowData) {
-    try {
-        // Store comprehensive window state
-        const windowState = {
-            originalWindowId: windowData.window.id,
-            title: windowData.displayTitle,
-            windowProperties: {
-                focused: windowData.window.focused,
-                incognito: windowData.window.incognito,
-                state: windowData.window.state,
-                type: windowData.window.type,
-                top: windowData.window.top,
-                left: windowData.window.left,
-                width: windowData.window.width,
-                height: windowData.window.height
-            },
-            tabs: windowData.window.tabs.map(tab => ({
-                url: tab.url,
-                title: tab.title,
-                favIconUrl: tab.favIconUrl,
-                index: tab.index,
-                pinned: tab.pinned,
-                active: tab.active,
-                muted: tab.mutedInfo?.muted || false,
-                discarded: tab.discarded,
-                autoDiscardable: tab.autoDiscardable
-            }))
-        };
-
-        const uuid = await dataStore.saveSleepingWindow(windowState);
-
-        // Close the window
-        await browser.windows.remove(windowData.window.id);
-
-        console.debug('Window put to sleep with UUID:', uuid, 'Title:', windowData.displayTitle);
-
-        // Refresh the window
-        await refreshManager();
-
-    } catch (error) {
-        console.error('Error sleeping window:', error);
-    }
-}
-
-async function wakeWindow(sleepingWindowData, currentWindowId) {
-    try {
-        console.debug(`wakeWindow(${sleepingWindowData} -> {uuid: ${sleepingWindowData.uuid}, title: ${sleepingWindowData.title}, tabs: ${sleepingWindowData.tabs}, sleepTime: ${sleepingWindowData.sleepTime})`);
-
-        // Send message to background script to handle window creation
-        console.debug('wakeWindow, sending message to background script...');
-
-        // Send message without waiting for response to avoid context issues
-        browser.runtime.sendMessage({
-            action: 'wakeWindow',
-            sleepingWindowData: sleepingWindowData,
-            currentWindowId: currentWindowId
-        }).catch(error => {
-            console.error('Message sending failed, but background should still handle it:', error);
-        });
-
-        console.debug('wakeWindow, message sent to background script');
-
-    } catch (error) {
-        console.error('Error waking window:', error);
-    }
 }
 
 function showWindowInfo(windowData) {
@@ -137,24 +68,13 @@ function showWindowInfo(windowData) {
 
     // Basic window information
     detailsContent.appendChild(createDetailRow('Title', windowData.displayTitle));
-    detailsContent.appendChild(createDetailRow('Status', windowData.isSleeping ? 'Sleeping' : 'Open'));
     detailsContent.appendChild(createDetailRow('Tabs', windowData.tabCount.toString()));
 
     if (windowData.isCurrentWindow) {
         detailsContent.appendChild(createDetailRow('Current', 'Yes'));
     }
 
-    if (windowData.isSleeping && windowData.sleepingData) {
-        if (windowData.sleepingData.sleepTime) {
-            const sleepDate = new Date(windowData.sleepingData.sleepTime);
-            detailsContent.appendChild(createDetailRow('Sleep Time', sleepDate.toLocaleString()));
-        }
-        if (windowData.sleepingData.uuid) {
-            detailsContent.appendChild(createDetailRow('UUID', windowData.sleepingData.uuid));
-        }
-    }
-
-    if (!windowData.isSleeping && windowData.window) {
+    if (windowData.window) {
         detailsContent.appendChild(createDetailRow('ID', windowData.window.id.toString()));
         if (windowData.window.type) {
             detailsContent.appendChild(createDetailRow('Type', windowData.window.type));
@@ -165,7 +85,7 @@ function showWindowInfo(windowData) {
     }
 
     // Tabs information
-    const tabs = windowData.isSleeping ? windowData.sleepingData?.tabs : windowData.window?.tabs;
+    const tabs = windowData.window?.tabs;
     if (tabs && tabs.length > 0) {
         const tabsTable = document.createElement('table');
         tabsTable.className = 'tabs-table';
@@ -197,13 +117,11 @@ function showWindowInfo(windowData) {
             row.appendChild(urlCell);
 
             const loadedCell = document.createElement('td');
-            if (!windowData.isSleeping) {
-                loadedCell.textContent = tab.discarded ? 'No' : 'Yes';
-            }
+            loadedCell.textContent = tab.discarded ? 'No' : 'Yes';
             row.appendChild(loadedCell);
 
             const actionsCell = document.createElement('td');
-            if (!windowData.isSleeping && !tab.active) {
+            if (!tab.active) {
                 const unloadBtn = document.createElement('button');
                 unloadBtn.className = 'window-btn';
                 unloadBtn.title = 'Unload tab';
@@ -237,7 +155,6 @@ async function refreshManager() {
 
 async function populateWindowsList() {
     const currentWindow = await browser.windows.getCurrent();
-    const sleepingWindows = await dataStore.getSleepingWindows();
     const windowsTableBody = document.querySelector('#windows-table-body');
 
     windowsTableBody.replaceChildren();
@@ -254,16 +171,13 @@ async function populateWindowsList() {
         let wd = await dataStore.GetWindowDataByUuid(uuid);
         let displayTitle = await dataStore.getTitleForWindow(window.id);
         if (wd) {
-            if (!wd.displayTitle) {
-            }
             if (!windowDatas.includes(wd)) {
                 windowDatas.push(wd);
             }
             continue;
         }
-        if (displayTitle) {
-        } else {
-            displayTitle = 'Window ' + window.id
+        if (!displayTitle) {
+            displayTitle = 'Window ' + window.id;
         }
         wd = new WindowData({
             window,
@@ -272,23 +186,9 @@ async function populateWindowsList() {
             displayTitle: displayTitle,
             tabCount: window.tabs.length,
             isCurrentWindow: window.id === currentWindow.id,
-            isSleeping: false
         });
         await dataStore.SetWindowDataForUuid(uuid, wd);
         windowDatas.push(wd);
-    }
-
-    // Add sleeping windows
-    console.debug(sleepingWindows.length + " sleeping windows");
-    for (const sleepingWindow of sleepingWindows) {
-        windowDatas.push(new WindowData({
-            window: null,
-            displayTitle: sleepingWindow.title || `Window ${sleepingWindow.id}`,
-            tabCount: sleepingWindow.tabs.length,
-            isCurrentWindow: false,
-            isSleeping: true,
-            sleepingData: sleepingWindow
-        }));
     }
 
     await dataStore.SetWindowDatas(windowDatas);
@@ -300,7 +200,7 @@ async function populateWindowsList() {
         } else if (sortColumn === 'tabs') {
             cmp = a.tabCount - b.tabCount;
         } else if (sortColumn === 'status') {
-            const statusValue = d => d.isSleeping ? 2 : d.isCurrentWindow ? 0 : 1;
+            const statusValue = d => d.isCurrentWindow ? 0 : 1;
             cmp = statusValue(a) - statusValue(b);
         }
         return sortDirection === 'asc' ? cmp : -cmp;
@@ -323,18 +223,12 @@ async function populateWindowsList() {
         row.appendChild(tabsCell);
 
         const statusCell = document.createElement('td');
-        if (data.isSleeping) {
-            statusCell.textContent = 'Sleeping';
-            statusCell.style.fontStyle = 'italic';
-            statusCell.style.color = '#666';
-        } else {
-            statusCell.textContent = data.isCurrentWindow ? 'Current' : 'Open';
-        }
+        statusCell.textContent = data.isCurrentWindow ? 'Current' : 'Open';
         row.appendChild(statusCell);
 
         const actionsCell = document.createElement('td');
 
-        if (!data.isSleeping) {
+        {
             const unloadButton = document.createElement('button');
             unloadButton.className = 'window-btn';
             unloadButton.title = 'Unload all tabs';
@@ -359,48 +253,24 @@ async function exportWindowsData() {
     try {
         console.debug('exportWindowsData: Starting export...');
 
-        // Get all open windows
         const windows = await browser.windows.getAll({populate: true});
         console.debug('exportWindowsData: Got open windows:', windows.length);
 
-        // Get sleeping windows
-        const sleepingWindows = await dataStore.getSleepingWindows();
-        console.debug('exportWindowsData: Got sleeping windows:', sleepingWindows.length);
-
         const exportData = {
             timestamp: new Date().toISOString(),
-            openWindows: [],
-            sleepingWindows: []
+            windows: []
         };
 
-        // Process open windows
         for (const window of windows) {
             const windowTitle = await dataStore.getTitleForWindow(window.id);
-            const windowData = new WindowData({
+            exportData.windows.push({
                 id: window.id,
                 title: windowTitle || `Window ${window.id}`,
-                state: 'open',
                 tabs: window.tabs.map(tab => ({
                     title: tab.title,
                     url: tab.url
                 }))
             });
-            exportData.openWindows.push(windowData);
-        }
-
-        // Process sleeping windows
-        for (const sleepingWindow of sleepingWindows) {
-            const windowData = new WindowData({
-                uuid: sleepingWindow.uuid,
-                title: sleepingWindow.title || `Sleeping Window ${sleepingWindow.uuid}`,
-                state: 'sleeping',
-                sleepTime: sleepingWindow.sleepTime,
-                tabs: sleepingWindow.tabs.map(tab => ({
-                    title: tab.title,
-                    url: tab.url
-                }))
-            });
-            exportData.sleepingWindows.push(windowData);
         }
 
         console.debug('exportWindowsData: Prepared export data');
