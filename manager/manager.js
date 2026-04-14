@@ -167,8 +167,7 @@ async function populateWindowsList() {
     const windows = await browser.windows.getAll({populate: true});
     console.debug(windows.length + " open windows");
     for (const window of windows) {
-        const uuid = await dataStore.GetUuidForWindow(window.id);
-        let wd = await dataStore.GetWindowDataByUuid(uuid);
+        let wd = await dataStore.GetWindowDataById(window.id);
         let displayTitle = await dataStore.getTitleForWindow(window.id);
         if (wd) {
             if (!windowDatas.includes(wd)) {
@@ -181,13 +180,12 @@ async function populateWindowsList() {
         }
         wd = new WindowData({
             window,
-            uuid: uuid,
             id: window.id,
             displayTitle: displayTitle,
             tabCount: window.tabs.length,
             isCurrentWindow: window.id === currentWindow.id,
         });
-        await dataStore.SetWindowDataForUuid(uuid, wd);
+        await dataStore.SetWindowDataForId(window.id, wd);
         windowDatas.push(wd);
     }
 

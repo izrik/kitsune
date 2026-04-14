@@ -22,7 +22,6 @@ export class DataStore {
                 isCurrentWindow: false,
                 id: windowId,
                 title: title,
-                uuid: null,
                 tabs: []
             };
         } else {
@@ -31,27 +30,6 @@ export class DataStore {
         }
 
         await this.saveWindowDataForWindow(windowId, windowData);
-    }
-
-    async GetUuidForWindow(windowId) {
-        console.debug(`GetUuidForWindow("${windowId}")`);
-        if (windowId == null) {
-            return null;
-        }
-        const userWindowUuid = await browser.sessions.getWindowValue(windowId, 'userWindowUuid');
-        if (userWindowUuid) {
-            return userWindowUuid;
-        }
-
-        const uuid = crypto.randomUUID();
-        await this.SaveUuidForWindow(windowId, uuid);
-        return uuid;
-    }
-
-    async SaveUuidForWindow(windowId, uuid) {
-        console.debug(`SaveUuidForWindow("${windowId}", "${uuid}")`);
-        await browser.sessions.setWindowValue(windowId, 'userWindowUuid', uuid);
-        return uuid;
     }
 
     async getWindowDataForWindow(windowId) {
@@ -73,32 +51,27 @@ export class DataStore {
         await browser.windows.update(windowId, {titlePreface: preface});
     }
 
-    windowDatasByUuid = {};
-    async GetWindowDataByUuid(uuid) {
-        return this.windowDatasByUuid[uuid];
+    windowDatasById = {};
+    async GetWindowDataById(windowId) {
+        return this.windowDatasById[windowId];
     }
     async GetWindowDatas() {
-        let rv = []
-        for (const wd of Object.values(this.windowDatasByUuid)) {
-            rv.push(wd);
-        }
-        return rv;
+        return Object.values(this.windowDatasById);
     }
 
     async SetWindowDatas(windowDatas) {
         let fs = [];
         for (const wd of windowDatas) {
-            console.debug(`DataStore.SetWindowDatas: ${wd.uuid} ${wd}`);
-            const f = dataStore.SetWindowDataForUuid(wd.uuid, wd);
-            fs.push(f);
+            console.debug(`DataStore.SetWindowDatas: ${wd.id} ${wd}`);
+            fs.push(dataStore.SetWindowDataForId(wd.id, wd));
         }
         for (const f of fs) {
             await f;
         }
     }
 
-    async SetWindowDataForUuid(uuid, wd) {
-        this.windowDatasByUuid[uuid] = wd;
+    async SetWindowDataForId(windowId, wd) {
+        this.windowDatasById[windowId] = wd;
         return wd;
     }
 }

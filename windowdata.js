@@ -7,7 +7,6 @@ export class WindowData {
         this.isCurrentWindow = options.isCurrentWindow || false;
         this.id = options.id || null;
         this.title = options.title || '';
-        this.uuid = options.uuid || null;
         this.tabs = options.tabs || [];
     }
 }
