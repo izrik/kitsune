@@ -3,6 +3,7 @@ export class DataStore {
     constructor() {
         console.debug("DataStore.constructor");
     }
+
     async getTitleForWindow(windowId) {
         console.debug(`getTitleForWindow(${windowId})`);
         const windowData = await this.getWindowDataForWindow(windowId);
@@ -11,24 +12,12 @@ export class DataStore {
 
     async saveTitleForWindow(windowId, title) {
         console.debug(`saveTitleForWindow("${windowId}", "${title}")`);
-
-        // Get existing window data or create new one
         let windowData = await this.getWindowDataForWindow(windowId);
         if (!windowData) {
-            windowData = {
-                displayTitle: title,
-                window: null,
-                tabCount: 0,
-                isCurrentWindow: false,
-                id: windowId,
-                title: title,
-                tabs: []
-            };
+            windowData = { id: windowId, displayTitle: title };
         } else {
             windowData.displayTitle = title;
-            windowData.title = title;
         }
-
         await this.saveWindowDataForWindow(windowId, windowData);
     }
 
@@ -49,30 +38,6 @@ export class DataStore {
         const title = await this.getTitleForWindow(windowId);
         const preface = title?.trim() ? `[${title}] ` : '';
         await browser.windows.update(windowId, {titlePreface: preface});
-    }
-
-    windowDatasById = {};
-    async GetWindowDataById(windowId) {
-        return this.windowDatasById[windowId];
-    }
-    async GetWindowDatas() {
-        return Object.values(this.windowDatasById);
-    }
-
-    async SetWindowDatas(windowDatas) {
-        let fs = [];
-        for (const wd of windowDatas) {
-            console.debug(`DataStore.SetWindowDatas: ${wd.id} ${wd}`);
-            fs.push(dataStore.SetWindowDataForId(wd.id, wd));
-        }
-        for (const f of fs) {
-            await f;
-        }
-    }
-
-    async SetWindowDataForId(windowId, wd) {
-        this.windowDatasById[windowId] = wd;
-        return wd;
     }
 }
 
@@ -101,5 +66,4 @@ export function setDataStore(value) {
 
 export function createDataStore(value) {
     console.debug(`createDataStore()`);
-
 }

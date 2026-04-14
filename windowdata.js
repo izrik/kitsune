@@ -6,7 +6,6 @@ export class WindowData {
         this.tabCount = options.tabCount || 0;
         this.isCurrentWindow = options.isCurrentWindow || false;
         this.id = options.id || null;
-        this.title = options.title || '';
         this.tabs = options.tabs || [];
     }
 }

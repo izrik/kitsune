@@ -159,37 +159,21 @@ async function populateWindowsList() {
 
     windowsTableBody.replaceChildren();
 
-    // Get stored window data
-    const windowDatas = await dataStore.GetWindowDatas();
-    console.debug(windowDatas.length + " starting window datas");
-
-    // Add open windows
     const windows = await browser.windows.getAll({populate: true});
-    console.debug(windows.length + " open windows");
+    const windowDatas = [];
     for (const window of windows) {
-        let wd = await dataStore.GetWindowDataById(window.id);
         let displayTitle = await dataStore.getTitleForWindow(window.id);
-        if (wd) {
-            if (!windowDatas.includes(wd)) {
-                windowDatas.push(wd);
-            }
-            continue;
-        }
         if (!displayTitle) {
             displayTitle = 'Window ' + window.id;
         }
-        wd = new WindowData({
+        windowDatas.push(new WindowData({
             window,
             id: window.id,
-            displayTitle: displayTitle,
+            displayTitle,
             tabCount: window.tabs.length,
             isCurrentWindow: window.id === currentWindow.id,
-        });
-        await dataStore.SetWindowDataForId(window.id, wd);
-        windowDatas.push(wd);
+        }));
     }
-
-    await dataStore.SetWindowDatas(windowDatas);
 
     windowDatas.sort((a, b) => {
         let cmp = 0;
@@ -203,8 +187,6 @@ async function populateWindowsList() {
         }
         return sortDirection === 'asc' ? cmp : -cmp;
     });
-
-    console.debug(windowDatas.length + " window datas");
 
     for (const data of windowDatas) {
         const row = document.createElement('tr');
@@ -225,21 +207,18 @@ async function populateWindowsList() {
         row.appendChild(statusCell);
 
         const actionsCell = document.createElement('td');
-
-        {
-            const unloadButton = document.createElement('button');
-            unloadButton.className = 'window-btn';
-            unloadButton.title = 'Unload all tabs';
-            const unloadIcon = document.createElement('img');
-            unloadIcon.src = '/icons/bedtime.png';
-            unloadIcon.alt = 'Unload all tabs';
-            unloadButton.appendChild(unloadIcon);
-            unloadButton.addEventListener('click', (e) => {
-                e.stopPropagation();
-                unloadAllTabsInWindow(data.window.id);
-            });
-            actionsCell.appendChild(unloadButton);
-        }
+        const unloadButton = document.createElement('button');
+        unloadButton.className = 'window-btn';
+        unloadButton.title = 'Unload all tabs';
+        const unloadIcon = document.createElement('img');
+        unloadIcon.src = '/icons/bedtime.png';
+        unloadIcon.alt = 'Unload all tabs';
+        unloadButton.appendChild(unloadIcon);
+        unloadButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            unloadAllTabsInWindow(data.window.id);
+        });
+        actionsCell.appendChild(unloadButton);
 
         row.appendChild(actionsCell);
 
