@@ -13,7 +13,7 @@ export class DataStore {
 
     async saveTitleForWindow(windowId, title) {
         console.debug(`saveTitleForWindow("${windowId}", "${title}")`);
-        await browser.sessions.setWindowValue(windowId, 'userWindowData', JSON.stringify({ id: windowId, displayTitle: title }));
+        await browser.sessions.setWindowValue(windowId, 'userWindowData', JSON.stringify({ displayTitle: title }));
     }
 
     async refreshAppearanceForWindow(windowId) {

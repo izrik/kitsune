@@ -129,10 +129,6 @@ function showWindowInfo(windowData) {
     detailsContainer.classList.add('visible');
 }
 
-async function refreshManager() {
-    await populateWindowsList();
-}
-
 async function populateWindowsList() {
     const currentWindow = await browser.windows.getCurrent();
     const windowsTableBody = document.querySelector('#windows-table-body');
@@ -155,7 +151,6 @@ async function populateWindowsList() {
         }
         windowDatas.push(new WindowData({
             window,
-            id: window.id,
             displayTitle,
             tabCount: window.tabs.length,
             isCurrentWindow: window.id === currentWindow.id,
@@ -302,10 +297,8 @@ async function refreshAppearanceForAllWindows() {
 
 async function minimizeAllWindows() {
     const windows = await browser.windows.getAll();
-
     for (const window of windows) {
-        const wid = window.id;
-        browser.windows.update(wid, {state: "minimized"})
+        browser.windows.update(window.id, {state: "minimized"});
     }
 }
 
@@ -315,7 +308,7 @@ window.onload = async () => {
     document.querySelector('#sort-status').addEventListener('click', () => setSort('status'));
 
     updateSortHeaders();
-    await refreshManager();
+    await populateWindowsList();
 
     document.querySelector('#export-button').addEventListener('click', exportWindowsData);
     document.querySelector('#minimize-all-windows-button').addEventListener('click', minimizeAllWindows);
