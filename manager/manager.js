@@ -329,6 +329,13 @@ async function unloadAllTabs() {
     await browser.tabs.discard(tabIds);
 }
 
+async function refreshAppearanceForAllWindows() {
+    const windows = await browser.windows.getAll();
+    for (const window of windows) {
+        await dataStore.refreshAppearanceForWindow(window.id);
+    }
+}
+
 async function minimizeAllWindows() {
     const windows = await browser.windows.getAll();
 
@@ -349,4 +356,5 @@ window.onload = async () => {
     document.querySelector('#export-button').addEventListener('click', exportWindowsData);
     document.querySelector('#minimize-all-windows-button').addEventListener('click', minimizeAllWindows);
     document.querySelector('#unload-all-tabs-button').addEventListener('click', unloadAllTabs);
+    document.querySelector('#refresh-appearance-button').addEventListener('click', refreshAppearanceForAllWindows);
 };
