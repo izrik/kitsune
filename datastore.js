@@ -6,31 +6,14 @@ export class DataStore {
 
     async getTitleForWindow(windowId) {
         console.debug(`getTitleForWindow(${windowId})`);
-        const windowData = await this.getWindowDataForWindow(windowId);
-        return windowData?.displayTitle || '';
+        const json = await browser.sessions.getWindowValue(windowId, 'userWindowData');
+        const data = json ? JSON.parse(json) : null;
+        return data?.displayTitle || '';
     }
 
     async saveTitleForWindow(windowId, title) {
         console.debug(`saveTitleForWindow("${windowId}", "${title}")`);
-        let windowData = await this.getWindowDataForWindow(windowId);
-        if (!windowData) {
-            windowData = { id: windowId, displayTitle: title };
-        } else {
-            windowData.displayTitle = title;
-        }
-        await this.saveWindowDataForWindow(windowId, windowData);
-    }
-
-    async getWindowDataForWindow(windowId) {
-        console.debug(`getWindowDataForWindow(${windowId})`);
-        const windowDataJson = await browser.sessions.getWindowValue(windowId, 'userWindowData');
-        return windowDataJson ? JSON.parse(windowDataJson) : null;
-    }
-
-    async saveWindowDataForWindow(windowId, windowData) {
-        console.debug(`saveWindowDataForWindow("${windowId}", windowData)`);
-        const windowDataJson = JSON.stringify(windowData);
-        await browser.sessions.setWindowValue(windowId, 'userWindowData', windowDataJson);
+        await browser.sessions.setWindowValue(windowId, 'userWindowData', JSON.stringify({ id: windowId, displayTitle: title }));
     }
 
     async refreshAppearanceForWindow(windowId) {
