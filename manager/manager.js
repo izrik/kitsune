@@ -29,21 +29,6 @@ function setSort(column) {
     populateWindowsList();
 }
 
-async function getWindowAndTabCounts() {
-    const windows = await browser.windows.getAll({populate: true});
-    const currentWindow = await browser.windows.getCurrent({populate: true});
-
-    const totalWindows = windows.length;
-    const totalTabs = windows.reduce((sum, window) => sum + window.tabs.length, 0);
-    const currentWindowTabs = currentWindow.tabs.length;
-
-    return {
-        totalWindows,
-        totalTabs,
-        currentWindowTabs
-    };
-}
-
 function showWindowInfo(windowData) {
     const detailsContainer = document.querySelector('#window-details');
     const detailsContent = document.querySelector('#window-details-content');
@@ -145,11 +130,6 @@ function showWindowInfo(windowData) {
 }
 
 async function refreshManager() {
-    const counts = await getWindowAndTabCounts();
-    document.querySelector('#window-count').textContent = counts.totalWindows;
-    document.querySelector('#total-tab-count').textContent = counts.totalTabs;
-    document.querySelector('#current-window-tab-count').textContent = counts.currentWindowTabs;
-
     await populateWindowsList();
 }
 
@@ -160,6 +140,13 @@ async function populateWindowsList() {
     windowsTableBody.replaceChildren();
 
     const windows = await browser.windows.getAll({populate: true});
+    const totalTabs = windows.reduce((sum, w) => sum + w.tabs.length, 0);
+    const currentWindowTabs = windows.find(w => w.id === currentWindow.id)?.tabs.length ?? 0;
+
+    document.querySelector('#window-count').textContent = windows.length;
+    document.querySelector('#total-tab-count').textContent = totalTabs;
+    document.querySelector('#current-window-tab-count').textContent = currentWindowTabs;
+
     const windowDatas = [];
     for (const window of windows) {
         let displayTitle = await dataStore.getTitleForWindow(window.id);
