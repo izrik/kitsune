@@ -1,4 +1,3 @@
-import {WindowData} from '/windowdata.js';
 import {getDataStore} from '/datastore.js';
 
 console.debug("manager module-level");
@@ -149,12 +148,12 @@ async function populateWindowsList() {
         if (!displayTitle) {
             displayTitle = 'Window ' + window.id;
         }
-        windowDatas.push(new WindowData({
+        windowDatas.push({
             window,
             displayTitle,
             tabCount: window.tabs.length,
             isCurrentWindow: window.id === currentWindow.id,
-        }));
+        });
     }
 
     windowDatas.sort((a, b) => {
