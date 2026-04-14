@@ -5,10 +5,8 @@ console.debug("popup module-level");
 const dataStore = getDataStore();
 
 async function getCurrentWindowTitle() {
-    const currentWindow = await window.browser.windows.getCurrent();
-    const currentWindowTitle = await dataStore.getTitleForWindow(currentWindow.id);
-
-    return currentWindowTitle;
+    const currentWindow = await browser.windows.getCurrent();
+    return await dataStore.getTitleForWindow(currentWindow.id);
 }
 
 async function setWindowTitle(title, windowId) {
@@ -17,15 +15,12 @@ async function setWindowTitle(title, windowId) {
     await dataStore.refreshAppearanceForWindow(windowId);
 }
 
-async function refreshPopup() {
-}
-
 document.querySelector('#popup-form').addEventListener('submit', async (e) => {
     console.debug('popup form submitted');
     e.preventDefault();
     const userWindowTitle = document.querySelector('#user-window-title-input').value;
     console.debug(`Got window title: ${userWindowTitle}`)
-    const currentWindow = await window.browser.windows.getCurrent();
+    const currentWindow = await browser.windows.getCurrent();
     await setWindowTitle(userWindowTitle, currentWindow.id);
     console.debug("Set window title. Now closing the popup.")
     window.close();
@@ -42,6 +37,4 @@ window.onload = async () => {
     const userWindowTitleInput = document.querySelector('#user-window-title-input');
     userWindowTitleInput.value = currentWindowTitle;
     userWindowTitleInput.select();
-
-    await refreshPopup();
 };
