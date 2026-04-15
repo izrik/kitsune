@@ -58,18 +58,16 @@ function showWindowInfo(windowData) {
         detailsContent.appendChild(createDetailRow('Current', 'Yes'));
     }
 
-    if (windowData.window) {
-        detailsContent.appendChild(createDetailRow('ID', windowData.window.id.toString()));
-        if (windowData.window.type) {
-            detailsContent.appendChild(createDetailRow('Type', windowData.window.type));
-        }
-        if (windowData.window.state) {
-            detailsContent.appendChild(createDetailRow('State', windowData.window.state));
-        }
+    detailsContent.appendChild(createDetailRow('ID', windowData.window.id.toString()));
+    if (windowData.window.type) {
+        detailsContent.appendChild(createDetailRow('Type', windowData.window.type));
+    }
+    if (windowData.window.state) {
+        detailsContent.appendChild(createDetailRow('State', windowData.window.state));
     }
 
     // Tabs information
-    const tabs = windowData.window?.tabs;
+    const tabs = windowData.window.tabs;
     if (tabs && tabs.length > 0) {
         const tabsTable = document.createElement('table');
         tabsTable.className = 'tabs-table';
@@ -278,12 +276,7 @@ async function unloadAllTabs() {
     if (!confirmed) return;
 
     const windows = await browser.windows.getAll({populate: true});
-    const tabIds = [];
-    for (const win of windows) {
-        for (const tab of win.tabs) {
-            if (!tab.active) tabIds.push(tab.id);
-        }
-    }
+    const tabIds = windows.flatMap(w => w.tabs.filter(t => !t.active).map(t => t.id));
     await browser.tabs.discard(tabIds);
 }
 

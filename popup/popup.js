@@ -4,25 +4,13 @@ console.debug("popup module-level");
 
 const dataStore = getDataStore();
 
-async function getCurrentWindowTitle() {
-    const currentWindow = await browser.windows.getCurrent();
-    return await dataStore.getTitleForWindow(currentWindow.id);
-}
-
-async function setWindowTitle(title, windowId) {
-    console.debug(`setWindowTitle("${title}", "${windowId}")`);
-    await dataStore.saveTitleForWindow(windowId, title);
-    await dataStore.refreshAppearanceForWindow(windowId);
-}
-
 document.querySelector('#popup-form').addEventListener('submit', async (e) => {
     console.debug('popup form submitted');
     e.preventDefault();
-    const userWindowTitle = document.querySelector('#user-window-title-input').value;
-    console.debug(`Got window title: ${userWindowTitle}`)
+    const title = document.querySelector('#user-window-title-input').value;
     const currentWindow = await browser.windows.getCurrent();
-    await setWindowTitle(userWindowTitle, currentWindow.id);
-    console.debug("Set window title. Now closing the popup.")
+    await dataStore.saveTitleForWindow(currentWindow.id, title);
+    await dataStore.refreshAppearanceForWindow(currentWindow.id);
     window.close();
 })
 
@@ -33,8 +21,8 @@ document.querySelector('#btn-settings').addEventListener('click', async (e) => {
 })
 
 window.onload = async () => {
-    const currentWindowTitle = await getCurrentWindowTitle();
+    const currentWindow = await browser.windows.getCurrent();
     const userWindowTitleInput = document.querySelector('#user-window-title-input');
-    userWindowTitleInput.value = currentWindowTitle;
+    userWindowTitleInput.value = await dataStore.getTitleForWindow(currentWindow.id);
     userWindowTitleInput.select();
 };
