@@ -1,5 +1,6 @@
+import {getDataStore} from './datastore.js';
+
 browser.windows.onCreated.addListener(async (window) => {
-    const mod = await import('./datastore.js');
-    const store = mod.getDataStore();
+    const store = getDataStore();
     await store.refreshAppearanceForWindow(window.id);
 });

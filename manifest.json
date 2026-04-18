@@ -1,5 +1,5 @@
 {
-  "manifest_version": 2,
+  "manifest_version": 3,
   "name": "Kitsune",
   "version": "0.2",
   "description": "Manages tabs and windows",
@@ -17,11 +17,11 @@
   ],
 
   "background": {
-    "scripts": ["background.js"],
-    "persistent": false
+    "service_worker": "background.js",
+    "type": "module"
   },
 
-  "browser_action": {
+  "action": {
     "default_icon": "icons/kitsune_thick.svg",
     "default_title": "Kitsune",
     "default_popup": "popup/popup.html"
