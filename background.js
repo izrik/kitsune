@@ -1,13 +1,5 @@
-const dataStore = import("./datastore.js").then((dataStore) => {
-    console.debug("background importing dataStore");
-
-    let store = dataStore.getDataStore();
-    if (!store) {
-        store = new dataStore.DataStore();
-        dataStore.setDataStore(store);
-    }
+browser.windows.onCreated.addListener(async (window) => {
+    const mod = await import('./datastore.js');
+    const store = mod.getDataStore();
+    await store.refreshAppearanceForWindow(window.id);
 });
-
-console.debug("background module-level");
-
-console.debug('Background script loaded');
