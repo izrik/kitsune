@@ -104,6 +104,27 @@ function showWindowInfo(windowData) {
 
             const actionsCell = document.createElement('td');
 
+            const pinBtn = document.createElement('button');
+            pinBtn.className = 'window-btn';
+            pinBtn.title = tab.pinned ? 'Unpin tab' : 'Pin tab';
+            const pinIcon = document.createElement('img');
+            pinIcon.src = tab.pinned ? '/icons/keep_off.png' : '/icons/keep.png';
+            pinIcon.alt = tab.pinned ? 'Unpin tab' : 'Pin tab';
+            pinBtn.appendChild(pinIcon);
+            pinBtn.addEventListener('click', () => browser.tabs.update(tab.id, {pinned: !tab.pinned}));
+            actionsCell.appendChild(pinBtn);
+
+            const muteBtn = document.createElement('button');
+            muteBtn.className = 'window-btn';
+            const isMuted = tab.mutedInfo?.muted;
+            muteBtn.title = isMuted ? 'Unmute tab' : 'Mute tab';
+            const muteIcon = document.createElement('img');
+            muteIcon.src = isMuted ? '/icons/volume_up.png' : '/icons/no_sound.png';
+            muteIcon.alt = isMuted ? 'Unmute tab' : 'Mute tab';
+            muteBtn.appendChild(muteIcon);
+            muteBtn.addEventListener('click', () => browser.tabs.update(tab.id, {muted: !isMuted}));
+            actionsCell.appendChild(muteBtn);
+
             const switchBtn = document.createElement('button');
             switchBtn.className = 'window-btn';
             switchBtn.title = 'Switch to tab';
