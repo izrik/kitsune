@@ -230,6 +230,7 @@ function showWindowInfo(windowData) {
 
     selectedWindowId = windowData.window.id;
     detailsContainer.classList.add('visible');
+    detailsContainer.scrollIntoView({behavior: 'smooth', block: 'nearest'});
 }
 
 function hideWindowInfo() {
