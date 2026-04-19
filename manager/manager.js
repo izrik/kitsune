@@ -103,6 +103,20 @@ function showWindowInfo(windowData) {
             row.appendChild(loadedCell);
 
             const actionsCell = document.createElement('td');
+
+            const switchBtn = document.createElement('button');
+            switchBtn.className = 'window-btn';
+            switchBtn.title = 'Switch to tab';
+            const switchIcon = document.createElement('img');
+            switchIcon.src = '/icons/read_more.png';
+            switchIcon.alt = 'Switch to tab';
+            switchBtn.appendChild(switchIcon);
+            switchBtn.addEventListener('click', async () => {
+                await browser.tabs.update(tab.id, {active: true});
+                await browser.windows.update(windowData.window.id, {focused: true});
+            });
+            actionsCell.appendChild(switchBtn);
+
             if (!tab.active) {
                 const unloadBtn = document.createElement('button');
                 unloadBtn.className = 'window-btn';
