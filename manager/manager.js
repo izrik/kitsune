@@ -291,7 +291,11 @@ async function populateWindowsList() {
         const row = document.createElement('tr');
         row.style.cursor = 'pointer';
         if (data.window.id === selectedWindowId) row.classList.add('selected');
-        row.addEventListener('click', () => showWindowInfo(data));
+        row.addEventListener('click', () => {
+            document.querySelectorAll('#windows-table-body tr').forEach(r => r.classList.remove('selected'));
+            row.classList.add('selected');
+            showWindowInfo(data);
+        });
 
         const titleCell = document.createElement('td');
         titleCell.textContent = data.displayTitle;
