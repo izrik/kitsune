@@ -6,6 +6,13 @@ const dataStore = getDataStore();
 
 let sortColumn = 'title';
 let sortDirection = 'asc';
+let selectedWindowId = null;
+let refreshTimer = null;
+
+function scheduleRefresh() {
+    clearTimeout(refreshTimer);
+    refreshTimer = setTimeout(populateWindowsList, 200);
+}
 
 function updateSortHeaders() {
     for (const col of ['title', 'tabs', 'status']) {
@@ -194,7 +201,13 @@ function showWindowInfo(windowData) {
         detailsContent.appendChild(tabsTable);
     }
 
+    selectedWindowId = windowData.window.id;
     detailsContainer.classList.add('visible');
+}
+
+function hideWindowInfo() {
+    selectedWindowId = null;
+    document.querySelector('#window-details').classList.remove('visible');
 }
 
 async function populateWindowsList() {
@@ -237,6 +250,15 @@ async function populateWindowsList() {
         }
         return sortDirection === 'asc' ? cmp : -cmp;
     });
+
+    if (selectedWindowId !== null) {
+        const selected = windowDatas.find(d => d.window.id === selectedWindowId);
+        if (selected) {
+            showWindowInfo(selected);
+        } else {
+            hideWindowInfo();
+        }
+    }
 
     for (const data of windowDatas) {
         const row = document.createElement('tr');
@@ -427,4 +449,13 @@ window.onload = async () => {
     document.querySelector('#minimize-all-windows-button').addEventListener('click', minimizeAllWindows);
     document.querySelector('#unload-all-tabs-button').addEventListener('click', unloadAllTabs);
     document.querySelector('#refresh-appearance-button').addEventListener('click', refreshAppearanceForAllWindows);
+
+    browser.tabs.onUpdated.addListener(scheduleRefresh);
+    browser.tabs.onCreated.addListener(scheduleRefresh);
+    browser.tabs.onRemoved.addListener(scheduleRefresh);
+    browser.tabs.onActivated.addListener(scheduleRefresh);
+    browser.tabs.onMoved.addListener(scheduleRefresh);
+    browser.windows.onCreated.addListener(scheduleRefresh);
+    browser.windows.onRemoved.addListener(scheduleRefresh);
+    browser.windows.onFocusChanged.addListener(scheduleRefresh);
 };
