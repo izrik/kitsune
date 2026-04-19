@@ -152,6 +152,26 @@ function showWindowInfo(windowData) {
             }
             actionsCell.appendChild(unloadBtn);
 
+            const moveBtn = document.createElement('button');
+            moveBtn.className = 'window-btn';
+            moveBtn.title = 'Move to new window';
+            const moveIcon = document.createElement('img');
+            moveIcon.src = '/icons/open_in_new.png';
+            moveIcon.alt = 'Move to new window';
+            moveBtn.appendChild(moveIcon);
+            moveBtn.addEventListener('click', () => browser.windows.create({tabId: tab.id}));
+            actionsCell.appendChild(moveBtn);
+
+            const dupBtn = document.createElement('button');
+            dupBtn.className = 'window-btn';
+            dupBtn.title = 'Duplicate tab';
+            const dupIcon = document.createElement('img');
+            dupIcon.src = '/icons/tab_duplicate.png';
+            dupIcon.alt = 'Duplicate tab';
+            dupBtn.appendChild(dupIcon);
+            dupBtn.addEventListener('click', () => browser.tabs.duplicate(tab.id));
+            actionsCell.appendChild(dupBtn);
+
             const closeTabBtn = document.createElement('button');
             closeTabBtn.className = 'window-btn';
             closeTabBtn.title = 'Close tab';
@@ -261,6 +281,19 @@ async function populateWindowsList() {
         });
         actionsCell.appendChild(unloadButton);
 
+        const reloadButton = document.createElement('button');
+        reloadButton.className = 'window-btn';
+        reloadButton.title = 'Reload all tabs';
+        const reloadIcon = document.createElement('img');
+        reloadIcon.src = '/icons/refresh.png';
+        reloadIcon.alt = 'Reload all tabs';
+        reloadButton.appendChild(reloadIcon);
+        reloadButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            reloadAllTabsInWindow(data.window.id);
+        });
+        actionsCell.appendChild(reloadButton);
+
         const closeWindowButton = document.createElement('button');
         closeWindowButton.className = 'window-btn';
         closeWindowButton.title = 'Close window';
@@ -333,6 +366,13 @@ async function exportWindowsData() {
     } catch (error) {
         console.error('exportWindowsData: Error during export:', error);
         alert('Error exporting windows data: ' + error.message);
+    }
+}
+
+async function reloadAllTabsInWindow(windowId) {
+    const win = await browser.windows.get(windowId, {populate: true});
+    for (const tab of win.tabs) {
+        browser.tabs.reload(tab.id);
     }
 }
 
