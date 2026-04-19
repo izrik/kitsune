@@ -117,17 +117,19 @@ function showWindowInfo(windowData) {
             });
             actionsCell.appendChild(switchBtn);
 
+            const unloadBtn = document.createElement('button');
+            unloadBtn.className = 'window-btn';
+            unloadBtn.title = 'Unload tab';
+            unloadBtn.disabled = tab.active;
+            const unloadIcon = document.createElement('img');
+            unloadIcon.src = '/icons/bedtime.png';
+            unloadIcon.alt = 'Unload tab';
+            unloadIcon.style.opacity = tab.active ? '0.3' : '1';
+            unloadBtn.appendChild(unloadIcon);
             if (!tab.active) {
-                const unloadBtn = document.createElement('button');
-                unloadBtn.className = 'window-btn';
-                unloadBtn.title = 'Unload tab';
-                const icon = document.createElement('img');
-                icon.src = '/icons/bedtime.png';
-                icon.alt = 'Unload tab';
-                unloadBtn.appendChild(icon);
                 unloadBtn.addEventListener('click', () => browser.tabs.discard(tab.id));
-                actionsCell.appendChild(unloadBtn);
             }
+            actionsCell.appendChild(unloadBtn);
 
             const closeTabBtn = document.createElement('button');
             closeTabBtn.className = 'window-btn';
