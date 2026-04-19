@@ -186,6 +186,20 @@ async function populateWindowsList() {
         row.appendChild(statusCell);
 
         const actionsCell = document.createElement('td');
+
+        const switchButton = document.createElement('button');
+        switchButton.className = 'window-btn';
+        switchButton.title = 'Switch to window';
+        const switchIcon = document.createElement('img');
+        switchIcon.src = '/icons/read_more.png';
+        switchIcon.alt = 'Switch to window';
+        switchButton.appendChild(switchIcon);
+        switchButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            browser.windows.update(data.window.id, {focused: true});
+        });
+        actionsCell.appendChild(switchButton);
+
         const unloadButton = document.createElement('button');
         unloadButton.className = 'window-btn';
         unloadButton.title = 'Unload all tabs';
