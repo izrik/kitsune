@@ -308,6 +308,19 @@ async function populateWindowsList() {
 
         const actionsCell = document.createElement('td');
 
+        const newTabButton = document.createElement('button');
+        newTabButton.className = 'window-btn';
+        newTabButton.title = 'New tab';
+        const newTabIcon = document.createElement('img');
+        newTabIcon.src = '/icons/new_window.png';
+        newTabIcon.alt = 'New tab';
+        newTabButton.appendChild(newTabIcon);
+        newTabButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            browser.tabs.create({windowId: data.window.id});
+        });
+        actionsCell.appendChild(newTabButton);
+
         const switchButton = document.createElement('button');
         switchButton.className = 'window-btn';
         switchButton.title = 'Switch to window';
