@@ -169,7 +169,10 @@ function showWindowInfo(windowData) {
             dupIcon.src = '/icons/tab_duplicate.png';
             dupIcon.alt = 'Duplicate tab';
             dupBtn.appendChild(dupIcon);
-            dupBtn.addEventListener('click', () => browser.tabs.duplicate(tab.id));
+            dupBtn.addEventListener('click', async () => {
+                const newTab = await browser.tabs.duplicate(tab.id);
+                await browser.tabs.move(newTab.id, {index: tab.index + 1});
+            });
             actionsCell.appendChild(dupBtn);
 
             const closeTabBtn = document.createElement('button');
