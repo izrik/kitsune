@@ -128,6 +128,17 @@ function showWindowInfo(windowData) {
                 unloadBtn.addEventListener('click', () => browser.tabs.discard(tab.id));
                 actionsCell.appendChild(unloadBtn);
             }
+
+            const closeTabBtn = document.createElement('button');
+            closeTabBtn.className = 'window-btn';
+            closeTabBtn.title = 'Close tab';
+            const closeTabIcon = document.createElement('img');
+            closeTabIcon.src = '/icons/close.png';
+            closeTabIcon.alt = 'Close tab';
+            closeTabBtn.appendChild(closeTabIcon);
+            closeTabBtn.addEventListener('click', () => browser.tabs.remove(tab.id));
+            actionsCell.appendChild(closeTabBtn);
+
             row.appendChild(actionsCell);
 
             tbody.appendChild(row);
@@ -226,6 +237,22 @@ async function populateWindowsList() {
             unloadAllTabsInWindow(data.window.id);
         });
         actionsCell.appendChild(unloadButton);
+
+        const closeWindowButton = document.createElement('button');
+        closeWindowButton.className = 'window-btn';
+        closeWindowButton.title = 'Close window';
+        const closeWindowIcon = document.createElement('img');
+        closeWindowIcon.src = '/icons/close.png';
+        closeWindowIcon.alt = 'Close window';
+        closeWindowButton.appendChild(closeWindowIcon);
+        closeWindowButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const confirmed = confirm(
+                `Close window "${data.displayTitle}" and all its tabs?\n\nThis can be undone from History > Recently Closed Windows.`
+            );
+            if (confirmed) browser.windows.remove(data.window.id);
+        });
+        actionsCell.appendChild(closeWindowButton);
 
         row.appendChild(actionsCell);
 
