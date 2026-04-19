@@ -1,13 +1,13 @@
-const dataStore = import("./datastore.js").then((dataStore) => {
-    console.debug("background importing dataStore");
+import {getDataStore} from './datastore.js';
 
-    let store = dataStore.getDataStore();
-    if (!store) {
-        store = new dataStore.DataStore();
-        dataStore.setDataStore(store);
-    }
+browser.windows.onCreated.addListener(async (window) => {
+    const store = getDataStore();
+    await store.refreshAppearanceForWindow(window.id);
 });
 
-console.debug("background module-level");
-
-console.debug('Background script loaded');
+// Session values for restored windows may not be available when onCreated
+// fires; refresh again when a tab becomes active in the window.
+browser.tabs.onActivated.addListener(async ({windowId}) => {
+    const store = getDataStore();
+    await store.refreshAppearanceForWindow(windowId);
+});
