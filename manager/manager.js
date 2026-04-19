@@ -98,7 +98,23 @@ function showWindowInfo(windowData) {
             row.appendChild(indexCell);
 
             const titleCell = document.createElement('td');
-            titleCell.textContent = tab.title || 'Untitled';
+            titleCell.style.display = 'flex';
+            titleCell.style.alignItems = 'center';
+            titleCell.style.gap = '4px';
+            if (tab.favIconUrl) {
+                const favicon = document.createElement('img');
+                favicon.src = tab.favIconUrl;
+                favicon.style.width = '16px';
+                favicon.style.height = '16px';
+                favicon.style.flexShrink = '0';
+                titleCell.appendChild(favicon);
+            }
+            const titleText = document.createElement('span');
+            titleText.textContent = tab.title || 'Untitled';
+            titleText.style.overflow = 'hidden';
+            titleText.style.textOverflow = 'ellipsis';
+            titleText.style.whiteSpace = 'nowrap';
+            titleCell.appendChild(titleText);
             row.appendChild(titleCell);
 
             const urlCell = document.createElement('td');
@@ -182,6 +198,16 @@ function showWindowInfo(windowData) {
             });
             actionsCell.appendChild(dupBtn);
 
+            const reloadTabBtn = document.createElement('button');
+            reloadTabBtn.className = 'window-btn';
+            reloadTabBtn.title = 'Reload tab';
+            const reloadTabIcon = document.createElement('img');
+            reloadTabIcon.src = '/icons/refresh.png';
+            reloadTabIcon.alt = 'Reload tab';
+            reloadTabBtn.appendChild(reloadTabIcon);
+            reloadTabBtn.addEventListener('click', () => browser.tabs.reload(tab.id));
+            actionsCell.appendChild(reloadTabBtn);
+
             const closeTabBtn = document.createElement('button');
             closeTabBtn.className = 'window-btn';
             closeTabBtn.title = 'Close tab';
@@ -263,6 +289,7 @@ async function populateWindowsList() {
     for (const data of windowDatas) {
         const row = document.createElement('tr');
         row.style.cursor = 'pointer';
+        if (data.window.id === selectedWindowId) row.classList.add('selected');
         row.addEventListener('click', () => showWindowInfo(data));
 
         const titleCell = document.createElement('td');
