@@ -6,6 +6,13 @@ const dataStore = getDataStore();
 
 let sortColumn = 'title';
 let sortDirection = 'asc';
+let selectedWindowId = null;
+let refreshTimer = null;
+
+function scheduleRefresh() {
+    clearTimeout(refreshTimer);
+    refreshTimer = setTimeout(populateWindowsList, 200);
+}
 
 function updateSortHeaders() {
     for (const col of ['title', 'tabs', 'status']) {
@@ -91,7 +98,24 @@ function showWindowInfo(windowData) {
             row.appendChild(indexCell);
 
             const titleCell = document.createElement('td');
-            titleCell.textContent = tab.title || 'Untitled';
+            titleCell.style.display = 'flex';
+            titleCell.style.alignItems = 'center';
+            titleCell.style.gap = '4px';
+            if (tab.favIconUrl) {
+                const favicon = document.createElement('img');
+                favicon.src = tab.favIconUrl;
+                favicon.style.width = '16px';
+                favicon.style.height = '16px';
+                favicon.style.flexShrink = '0';
+                favicon.onerror = () => favicon.remove();
+                titleCell.appendChild(favicon);
+            }
+            const titleText = document.createElement('span');
+            titleText.textContent = tab.title || 'Untitled';
+            titleText.style.overflow = 'hidden';
+            titleText.style.textOverflow = 'ellipsis';
+            titleText.style.whiteSpace = 'nowrap';
+            titleCell.appendChild(titleText);
             row.appendChild(titleCell);
 
             const urlCell = document.createElement('td');
@@ -103,17 +127,98 @@ function showWindowInfo(windowData) {
             row.appendChild(loadedCell);
 
             const actionsCell = document.createElement('td');
+
+            const pinBtn = document.createElement('button');
+            pinBtn.className = 'window-btn';
+            pinBtn.title = tab.pinned ? 'Unpin tab' : 'Pin tab';
+            const pinIcon = document.createElement('img');
+            pinIcon.src = tab.pinned ? '/icons/keep_off.png' : '/icons/keep.png';
+            pinIcon.alt = tab.pinned ? 'Unpin tab' : 'Pin tab';
+            pinBtn.appendChild(pinIcon);
+            pinBtn.addEventListener('click', () => browser.tabs.update(tab.id, {pinned: !tab.pinned}));
+            actionsCell.appendChild(pinBtn);
+
+            const muteBtn = document.createElement('button');
+            muteBtn.className = 'window-btn';
+            const isMuted = tab.mutedInfo?.muted;
+            muteBtn.title = isMuted ? 'Unmute tab' : 'Mute tab';
+            const muteIcon = document.createElement('img');
+            muteIcon.src = isMuted ? '/icons/volume_up.png' : '/icons/no_sound.png';
+            muteIcon.alt = isMuted ? 'Unmute tab' : 'Mute tab';
+            muteBtn.appendChild(muteIcon);
+            muteBtn.addEventListener('click', () => browser.tabs.update(tab.id, {muted: !isMuted}));
+            actionsCell.appendChild(muteBtn);
+
+            const switchBtn = document.createElement('button');
+            switchBtn.className = 'window-btn';
+            switchBtn.title = 'Switch to tab';
+            const switchIcon = document.createElement('img');
+            switchIcon.src = '/icons/read_more.png';
+            switchIcon.alt = 'Switch to tab';
+            switchBtn.appendChild(switchIcon);
+            switchBtn.addEventListener('click', async () => {
+                await browser.tabs.update(tab.id, {active: true});
+                await browser.windows.update(windowData.window.id, {focused: true});
+            });
+            actionsCell.appendChild(switchBtn);
+
+            const unloadBtn = document.createElement('button');
+            unloadBtn.className = 'window-btn';
+            unloadBtn.title = 'Unload tab';
+            unloadBtn.disabled = tab.active;
+            const unloadIcon = document.createElement('img');
+            unloadIcon.src = '/icons/bedtime.png';
+            unloadIcon.alt = 'Unload tab';
+            unloadIcon.style.opacity = tab.active ? '0.3' : '1';
+            unloadBtn.appendChild(unloadIcon);
             if (!tab.active) {
-                const unloadBtn = document.createElement('button');
-                unloadBtn.className = 'window-btn';
-                unloadBtn.title = 'Unload tab';
-                const icon = document.createElement('img');
-                icon.src = '/icons/bedtime.png';
-                icon.alt = 'Unload tab';
-                unloadBtn.appendChild(icon);
                 unloadBtn.addEventListener('click', () => browser.tabs.discard(tab.id));
-                actionsCell.appendChild(unloadBtn);
             }
+            actionsCell.appendChild(unloadBtn);
+
+            const moveBtn = document.createElement('button');
+            moveBtn.className = 'window-btn';
+            moveBtn.title = 'Move to new window';
+            const moveIcon = document.createElement('img');
+            moveIcon.src = '/icons/open_in_new.png';
+            moveIcon.alt = 'Move to new window';
+            moveBtn.appendChild(moveIcon);
+            moveBtn.addEventListener('click', () => browser.windows.create({tabId: tab.id}));
+            actionsCell.appendChild(moveBtn);
+
+            const dupBtn = document.createElement('button');
+            dupBtn.className = 'window-btn';
+            dupBtn.title = 'Duplicate tab';
+            const dupIcon = document.createElement('img');
+            dupIcon.src = '/icons/tab_duplicate.png';
+            dupIcon.alt = 'Duplicate tab';
+            dupBtn.appendChild(dupIcon);
+            dupBtn.addEventListener('click', async () => {
+                const newTab = await browser.tabs.duplicate(tab.id);
+                await browser.tabs.move(newTab.id, {index: tab.index + 1});
+            });
+            actionsCell.appendChild(dupBtn);
+
+            const reloadTabBtn = document.createElement('button');
+            reloadTabBtn.className = 'window-btn';
+            reloadTabBtn.title = 'Reload tab';
+            const reloadTabIcon = document.createElement('img');
+            reloadTabIcon.src = '/icons/refresh.png';
+            reloadTabIcon.alt = 'Reload tab';
+            reloadTabBtn.appendChild(reloadTabIcon);
+            reloadTabBtn.addEventListener('click', () => browser.tabs.reload(tab.id));
+            actionsCell.appendChild(reloadTabBtn);
+
+            const closeTabBtn = document.createElement('button');
+            closeTabBtn.className = 'window-btn';
+            closeTabBtn.title = 'Close tab';
+            const closeTabIcon = document.createElement('img');
+            closeTabIcon.src = '/icons/close.png';
+            closeTabIcon.alt = 'Close tab';
+            closeTabBtn.appendChild(closeTabIcon);
+            closeTabBtn.addEventListener('click', () => browser.tabs.remove(tab.id));
+            actionsCell.appendChild(closeTabBtn);
+
             row.appendChild(actionsCell);
 
             tbody.appendChild(row);
@@ -123,7 +228,14 @@ function showWindowInfo(windowData) {
         detailsContent.appendChild(tabsTable);
     }
 
+    selectedWindowId = windowData.window.id;
     detailsContainer.classList.add('visible');
+    detailsContainer.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+}
+
+function hideWindowInfo() {
+    selectedWindowId = null;
+    document.querySelector('#window-details').classList.remove('visible');
 }
 
 async function populateWindowsList() {
@@ -167,10 +279,24 @@ async function populateWindowsList() {
         return sortDirection === 'asc' ? cmp : -cmp;
     });
 
+    if (selectedWindowId !== null) {
+        const selected = windowDatas.find(d => d.window.id === selectedWindowId);
+        if (selected) {
+            showWindowInfo(selected);
+        } else {
+            hideWindowInfo();
+        }
+    }
+
     for (const data of windowDatas) {
         const row = document.createElement('tr');
         row.style.cursor = 'pointer';
-        row.addEventListener('click', () => showWindowInfo(data));
+        if (data.window.id === selectedWindowId) row.classList.add('selected');
+        row.addEventListener('click', () => {
+            document.querySelectorAll('#windows-table-body tr').forEach(r => r.classList.remove('selected'));
+            row.classList.add('selected');
+            showWindowInfo(data);
+        });
 
         const titleCell = document.createElement('td');
         titleCell.textContent = data.displayTitle;
@@ -186,6 +312,33 @@ async function populateWindowsList() {
         row.appendChild(statusCell);
 
         const actionsCell = document.createElement('td');
+
+        const newTabButton = document.createElement('button');
+        newTabButton.className = 'window-btn';
+        newTabButton.title = 'New tab';
+        const newTabIcon = document.createElement('img');
+        newTabIcon.src = '/icons/new_window.png';
+        newTabIcon.alt = 'New tab';
+        newTabButton.appendChild(newTabIcon);
+        newTabButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            browser.tabs.create({windowId: data.window.id});
+        });
+        actionsCell.appendChild(newTabButton);
+
+        const switchButton = document.createElement('button');
+        switchButton.className = 'window-btn';
+        switchButton.title = 'Switch to window';
+        const switchIcon = document.createElement('img');
+        switchIcon.src = '/icons/read_more.png';
+        switchIcon.alt = 'Switch to window';
+        switchButton.appendChild(switchIcon);
+        switchButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            browser.windows.update(data.window.id, {focused: true});
+        });
+        actionsCell.appendChild(switchButton);
+
         const unloadButton = document.createElement('button');
         unloadButton.className = 'window-btn';
         unloadButton.title = 'Unload all tabs';
@@ -198,6 +351,35 @@ async function populateWindowsList() {
             unloadAllTabsInWindow(data.window.id);
         });
         actionsCell.appendChild(unloadButton);
+
+        const reloadButton = document.createElement('button');
+        reloadButton.className = 'window-btn';
+        reloadButton.title = 'Reload all tabs';
+        const reloadIcon = document.createElement('img');
+        reloadIcon.src = '/icons/refresh.png';
+        reloadIcon.alt = 'Reload all tabs';
+        reloadButton.appendChild(reloadIcon);
+        reloadButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            reloadAllTabsInWindow(data.window.id);
+        });
+        actionsCell.appendChild(reloadButton);
+
+        const closeWindowButton = document.createElement('button');
+        closeWindowButton.className = 'window-btn';
+        closeWindowButton.title = 'Close window';
+        const closeWindowIcon = document.createElement('img');
+        closeWindowIcon.src = '/icons/close.png';
+        closeWindowIcon.alt = 'Close window';
+        closeWindowButton.appendChild(closeWindowIcon);
+        closeWindowButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const confirmed = confirm(
+                `Close window "${data.displayTitle}" and all its tabs?\n\nThis can be undone from History > Recently Closed Windows.`
+            );
+            if (confirmed) browser.windows.remove(data.window.id);
+        });
+        actionsCell.appendChild(closeWindowButton);
 
         row.appendChild(actionsCell);
 
@@ -258,6 +440,13 @@ async function exportWindowsData() {
     }
 }
 
+async function reloadAllTabsInWindow(windowId) {
+    const win = await browser.windows.get(windowId, {populate: true});
+    for (const tab of win.tabs) {
+        browser.tabs.reload(tab.id);
+    }
+}
+
 async function unloadAllTabsInWindow(windowId) {
     const confirmed = confirm(
         'Unloading tabs will discard any unsaved changes (such as text entered in forms).\n\nContinue?'
@@ -306,4 +495,13 @@ window.onload = async () => {
     document.querySelector('#minimize-all-windows-button').addEventListener('click', minimizeAllWindows);
     document.querySelector('#unload-all-tabs-button').addEventListener('click', unloadAllTabs);
     document.querySelector('#refresh-appearance-button').addEventListener('click', refreshAppearanceForAllWindows);
+
+    browser.tabs.onUpdated.addListener(scheduleRefresh);
+    browser.tabs.onCreated.addListener(scheduleRefresh);
+    browser.tabs.onRemoved.addListener(scheduleRefresh);
+    browser.tabs.onActivated.addListener(scheduleRefresh);
+    browser.tabs.onMoved.addListener(scheduleRefresh);
+    browser.windows.onCreated.addListener(scheduleRefresh);
+    browser.windows.onRemoved.addListener(scheduleRefresh);
+    browser.windows.onFocusChanged.addListener(scheduleRefresh);
 };
