@@ -107,6 +107,7 @@ function showWindowInfo(windowData) {
                 favicon.style.width = '16px';
                 favicon.style.height = '16px';
                 favicon.style.flexShrink = '0';
+                favicon.onerror = () => favicon.remove();
                 titleCell.appendChild(favicon);
             }
             const titleText = document.createElement('span');
