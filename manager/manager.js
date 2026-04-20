@@ -150,7 +150,9 @@ async function showWindowInfo(windowData) {
         });
 
         bulkCloseBtn.addEventListener('click', async () => {
-            await browser.tabs.remove(getCheckedTabIds());
+            const ids = getCheckedTabIds();
+            if (!confirm(`Close ${ids.length} tab${ids.length !== 1 ? 's' : ''}?`)) return;
+            await browser.tabs.remove(ids);
         });
 
         bulkMoveBtn.addEventListener('click', async () => {
