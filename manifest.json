@@ -27,8 +27,8 @@
     "default_popup": "popup/popup.html",
     "theme_icons": [
       {
-        "light": "icons/kitsune_thick.svg",
-        "dark": "icons/kitsune_thick_white.svg",
+        "light": "icons/kitsune_thick_white.svg",
+        "dark": "icons/kitsune_thick.svg",
         "size": 48
       }
     ]
