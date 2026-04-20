@@ -1,25 +1,143 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Kitsune pop-up page</title>
+    <title>Kitsune</title>
     <meta charset="utf-8"/>
     <style>
-        body {
-            min-width: 300px;
-            font-family: Arial, sans-serif;
-            font-size: 12px;
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg: #faf8f5;
+            --border: #ddd8d0;
+            --text: #261e1a;
+            --text-muted: #7d726a;
+            --accent: #bf5c25;
+            --accent-hover: #a34d1e;
+            --header-bg: #261e1a;
+            --header-fg: #f5efe8;
         }
+
+        body {
+            min-width: 280px;
+            background: var(--bg);
+            font-family: -apple-system, 'Segoe UI', 'Helvetica Neue', sans-serif;
+            font-size: 12px;
+            color: var(--text);
+        }
+
+        header {
+            background: var(--header-bg);
+            padding: 10px 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .header-brand {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+        }
+
+        header img.logo {
+            width: 16px;
+            height: 16px;
+            filter: brightness(0) invert(1);
+        }
+
+        header h1 {
+            font-family: Georgia, 'Times New Roman', serif;
+            font-size: 13px;
+            font-weight: normal;
+            color: var(--header-fg);
+            letter-spacing: 0.06em;
+        }
+
+        #btn-settings {
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            opacity: 0.5;
+            transition: opacity 0.15s;
+        }
+
+        #btn-settings:hover { opacity: 1; }
+
+        #btn-settings img {
+            width: 14px;
+            height: 14px;
+            filter: brightness(0) invert(1);
+        }
+
+        .form-body {
+            padding: 14px 14px 12px;
+        }
+
+        .field-label {
+            display: block;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.09em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        #user-window-title-input {
+            display: block;
+            width: 100%;
+            padding: 7px 9px;
+            border: 1.5px solid var(--border);
+            border-radius: 5px;
+            background: #fff;
+            font-family: inherit;
+            font-size: 12px;
+            color: var(--text);
+            outline: none;
+            transition: border-color 0.15s, box-shadow 0.15s;
+            margin-bottom: 10px;
+        }
+
+        #user-window-title-input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(191, 92, 37, 0.12);
+        }
+
+        #user-window-title-input::placeholder { color: #b8b0a8; }
+
+        #submit {
+            width: 100%;
+            padding: 7px 12px;
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            font-family: inherit;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.03em;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        #submit:hover { background: var(--accent-hover); }
+        #submit:active { transform: translateY(1px); }
     </style>
 </head>
 <body>
-<form id="popup-form" autocomplete="off">
-    <p>Set the window title:
-        <span id="btn-settings" style="float:right; cursor: pointer;">
-            ️<img alt="Settings" title="Settings" src="/icons/settings.png"/>
-        </span>
-    </p>
-    <input id="user-window-title-input" type="text" autofocus/>
-    <input id="submit" type="submit" value="OK"/>
+<header>
+    <div class="header-brand">
+        <img class="logo" src="/icons/kitsune_thick.svg" alt=""/>
+        <h1>Kitsune</h1>
+    </div>
+    <span id="btn-settings">
+        <img alt="Settings" title="Settings" src="/icons/settings.png"/>
+    </span>
+</header>
+<form id="popup-form" autocomplete="off" class="form-body">
+    <label class="field-label" for="user-window-title-input">Window Title</label>
+    <input id="user-window-title-input" type="text" autofocus placeholder="Name this window…"/>
+    <input id="submit" type="submit" value="Set Title"/>
 </form>
 <script async src="popup.js" type="module"></script>
 </body>

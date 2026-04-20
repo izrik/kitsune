@@ -1,26 +1,125 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Kitsune pop-up page</title>
+    <title>Kitsune Manager</title>
     <meta charset="utf-8"/>
     <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg: #faf8f5;
+            --surface: #ffffff;
+            --border: #ddd8d0;
+            --border-light: #ede9e3;
+            --text: #261e1a;
+            --text-muted: #7d726a;
+            --accent: #bf5c25;
+            --accent-hover: #a34d1e;
+            --header-bg: #261e1a;
+            --header-fg: #f5efe8;
+            --selected-bg: #fdf0e8;
+            --selected-hover-bg: #fae3d0;
+            --row-hover: #f7f3ee;
+            --tint-bg: #f3efe9;
+        }
+
+        body {
+            background: var(--bg);
+            font-family: -apple-system, 'Segoe UI', 'Helvetica Neue', sans-serif;
+            font-size: 12px;
+            color: var(--text);
+            min-width: 520px;
+        }
+
+        /* ── Header ───────────────────────── */
+
+        #app-header {
+            background: var(--header-bg);
+            padding: 11px 18px;
+            display: flex;
+            align-items: center;
+            gap: 9px;
+        }
+
+        #app-header img {
+            width: 18px;
+            height: 18px;
+            filter: brightness(0) invert(1);
+        }
+
+        #app-header h1 {
+            font-family: Georgia, 'Times New Roman', serif;
+            font-size: 14px;
+            font-weight: normal;
+            color: var(--header-fg);
+            letter-spacing: 0.06em;
+        }
+
+        /* ── Stats bar ────────────────────── */
+
+        #stats {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 7px 18px;
+            display: flex;
+            gap: 20px;
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        #stats .stat-item { display: flex; align-items: center; gap: 4px; }
+
+        #stats .stat-value { font-weight: 600; color: var(--text); }
+
+        /* ── Main layout ──────────────────── */
+
+        #main-content {
+            padding: 16px 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .section-label {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        /* ── Windows table ────────────────── */
+
+        #windows-table-wrapper {
+            max-height: 260px;
+            overflow-y: auto;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--surface);
+        }
+
         #windows-table {
             width: 100%;
             border-collapse: collapse;
-            background-color: #f9f9f9;
-            border: 1px solid #ccc;
         }
 
         #windows-table thead {
             position: sticky;
             top: 0;
-            background-color: #e8e8e8;
+            background: var(--tint-bg);
+            z-index: 1;
         }
 
         #windows-table th {
-            padding: 4px 8px;
+            padding: 6px 10px;
             text-align: left;
-            border-bottom: 2px solid #ccc;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.07em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border);
             white-space: nowrap;
         }
 
@@ -30,30 +129,23 @@
         }
 
         #windows-table th.sortable:hover {
-            background-color: #d8d8d8;
+            color: var(--accent);
+            background: #ece7e0;
         }
 
         #windows-table td {
-            padding: 3px 8px;
-            border-bottom: 1px solid #e0e0e0;
+            padding: 6px 10px;
+            border-bottom: 1px solid var(--border-light);
             vertical-align: middle;
         }
 
-        #windows-table tbody tr:last-child td {
-            border-bottom: none;
-        }
+        #windows-table tbody tr:last-child td { border-bottom: none; }
 
-        #windows-table tbody tr:hover {
-            background-color: #eef;
-        }
+        #windows-table tbody tr:hover { background: var(--row-hover); }
 
-        #windows-table tbody tr.selected {
-            background-color: #ddf;
-        }
+        #windows-table tbody tr.selected { background: var(--selected-bg); }
 
-        #windows-table tbody tr.selected:hover {
-            background-color: #ccf;
-        }
+        #windows-table tbody tr.selected:hover { background: var(--selected-hover-bg); }
 
         #windows-table th:nth-child(n+2),
         #windows-table td:nth-child(n+2) {
@@ -61,101 +153,84 @@
             white-space: nowrap;
         }
 
-        #windows-table-wrapper {
-            max-height: 300px;
-            overflow-y: auto;
-            border: 1px solid #ccc;
-        }
-
-        .window-btn {
-            background: none;
-            border: none;
-            cursor: pointer;
-            padding: 2px;
-            display: inline-flex;
-            align-items: center;
-        }
-
-        .window-btn img {
-            width: 16px;
-            height: 16px;
-        }
-
-        .window-btn:hover {
-            background-color: #e0e0e0;
-            border-radius: 2px;
-        }
-
-        body {
-            min-width: 300px;
-            font-family: Arial, sans-serif;
-            font-size: 12px;
-        }
+        /* ── Window details ───────────────── */
 
         #window-details {
-            margin-top: 10px;
-            padding: 8px;
-            border: 1px solid #ccc;
-            background-color: #f9f9f9;
-            border-radius: 4px;
             display: none;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--surface);
+            overflow: hidden;
         }
 
-        #window-details.visible {
-            display: block;
-        }
+        #window-details.visible { display: block; }
 
-        #window-details h4 {
-            margin: 0 0 8px 0;
-            color: #333;
+        #window-details-header {
+            background: var(--tint-bg);
+            border-bottom: 1px solid var(--border);
+            padding: 6px 12px;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.09em;
+            text-transform: uppercase;
+            color: var(--text-muted);
         }
 
         #window-details-content {
+            padding: 10px 12px;
             font-size: 11px;
         }
 
         .detail-row {
             margin-bottom: 4px;
+            display: flex;
+            align-items: baseline;
+            gap: 6px;
         }
 
         .detail-label {
-            font-weight: bold;
-            display: inline-block;
-            min-width: 60px;
+            font-weight: 700;
+            font-size: 10px;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            min-width: 48px;
+            flex-shrink: 0;
         }
+
+        /* ── Tabs table (JS-injected) ─────── */
 
         .tabs-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 4px;
-            font-size: 10px;
+            margin-top: 8px;
+            font-size: 11px;
         }
 
-        .tabs-table thead {
-            background-color: #e8e8e8;
-        }
+        .tabs-table thead { background: var(--tint-bg); }
 
         .tabs-table th {
-            padding: 2px 6px;
+            padding: 4px 8px;
             text-align: left;
-            border-bottom: 1px solid #ccc;
+            border-bottom: 1px solid var(--border);
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--text-muted);
             white-space: nowrap;
         }
 
         .tabs-table td {
-            padding: 2px 6px;
-            border-bottom: 1px solid #eee;
-            vertical-align: top;
+            padding: 4px 8px;
+            border-bottom: 1px solid var(--border-light);
+            vertical-align: middle;
             word-break: break-all;
         }
 
-        .tabs-table tbody tr:last-child td {
-            border-bottom: none;
-        }
+        .tabs-table tbody tr:last-child td { border-bottom: none; }
 
-        .tabs-table tbody tr:hover {
-            background-color: #eef;
-        }
+        .tabs-table tbody tr:hover { background: var(--row-hover); }
 
         .tabs-table th:first-child,
         .tabs-table td:first-child,
@@ -175,60 +250,138 @@
             text-overflow: ellipsis;
         }
 
+        /* ── Bulk action bar (JS-injected) ── */
+
         .bulk-action-bar {
             display: none;
             align-items: center;
             gap: 8px;
-            margin-top: 6px;
-            padding: 4px 6px;
-            background-color: #eef;
-            border: 1px solid #ccd;
-            border-radius: 4px;
+            margin-top: 8px;
+            padding: 6px 10px;
+            background: var(--selected-bg);
+            border: 1px solid #e8d4c0;
+            border-radius: 5px;
             font-size: 11px;
         }
 
-        .bulk-action-bar.visible {
-            display: flex;
+        .bulk-action-bar.visible { display: flex; }
+
+        /* ── Icon buttons ─────────────────── */
+
+        .window-btn {
+            background: none;
+            border: 1px solid transparent;
+            border-radius: 4px;
+            cursor: pointer;
+            padding: 2px 3px;
+            display: inline-flex;
+            align-items: center;
+            transition: background 0.12s, border-color 0.12s;
         }
+
+        .window-btn img {
+            width: 14px;
+            height: 14px;
+            display: block;
+        }
+
+        .window-btn:hover {
+            background: var(--border-light);
+            border-color: var(--border);
+        }
+
+        .window-btn:disabled {
+            cursor: default;
+            pointer-events: none;
+            opacity: 0.3;
+        }
+
+        /* ── Actions toolbar ──────────────── */
+
+        #actions-toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .action-btn {
+            padding: 6px 12px;
+            background: var(--surface);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            font-family: inherit;
+            font-size: 11px;
+            cursor: pointer;
+            transition: background 0.12s, border-color 0.12s;
+            white-space: nowrap;
+        }
+
+        .action-btn:hover {
+            background: var(--row-hover);
+            border-color: #c8bfb5;
+        }
+
+        .action-btn:active { transform: translateY(1px); }
     </style>
 </head>
 <body>
+
+<div id="app-header">
+    <img src="/icons/kitsune_thick.svg" alt=""/>
+    <h1>Kitsune</h1>
+</div>
+
 <div id="stats">
-    <p>Windows: <span id="window-count">-</span> | Total tabs: <span id="total-tab-count">-</span> | Current window tabs: <span id="current-window-tab-count">-</span></p>
+    <div class="stat-item">Windows: <span class="stat-value" id="window-count">—</span></div>
+    <div class="stat-item">Total tabs: <span class="stat-value" id="total-tab-count">—</span></div>
+    <div class="stat-item">Current window: <span class="stat-value" id="current-window-tab-count">—</span> tabs</div>
 </div>
-<div id="windows-list">
-    <h3>Windows</h3>
-    <div id="windows-table-wrapper">
-        <table id="windows-table">
-            <thead>
-                <tr>
-                    <th id="sort-title" class="sortable">Title</th>
-                    <th id="sort-tabs" class="sortable">Tabs</th>
-                    <th id="sort-status" class="sortable">Status</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody id="windows-table-body"></tbody>
-        </table>
+
+<div id="main-content">
+
+    <div id="windows-list">
+        <div class="section-label">Windows</div>
+        <div id="windows-table-wrapper">
+            <table id="windows-table">
+                <thead>
+                    <tr>
+                        <th id="sort-title" class="sortable">Title</th>
+                        <th id="sort-tabs" class="sortable">Tabs</th>
+                        <th id="sort-status" class="sortable">Status</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="windows-table-body"></tbody>
+            </table>
+        </div>
     </div>
+
+    <div id="window-details">
+        <div id="window-details-header">Window Details</div>
+        <div id="window-details-content"></div>
+    </div>
+
+    <div id="actions-section">
+        <div class="section-label">Actions</div>
+        <div id="actions-toolbar">
+            <div id="export-section">
+                <button id="export-button" class="action-btn">Export Windows Data</button>
+            </div>
+            <div id="minimize-all-windows-section">
+                <button id="minimize-all-windows-button" class="action-btn">Minimize All Windows</button>
+            </div>
+            <div id="unload-all-tabs-section">
+                <button id="unload-all-tabs-button" class="action-btn">Unload All Tabs</button>
+            </div>
+            <div id="refresh-appearance-section">
+                <button id="refresh-appearance-button" class="action-btn">Refresh Window Titles</button>
+            </div>
+        </div>
+    </div>
+
 </div>
-<div id="window-details">
-    <h4>Window Details</h4>
-    <div id="window-details-content"></div>
-</div>
-<hr/>
-<div id="export-section">
-    <button id="export-button">Export Windows Data</button>
-</div>
-<div id="minimize-all-windows-section">
-    <button id="minimize-all-windows-button">Minimize All Windows</button>
-</div>
-<div id="unload-all-tabs-section">
-    <button id="unload-all-tabs-button">Unload All Tabs</button>
-</div>
-<div id="refresh-appearance-section">
-    <button id="refresh-appearance-button">Refresh Window Titles</button>
-</div>
+
 <script async src="manager.js" type="module"></script>
 </body>
 </html>
