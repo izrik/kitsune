@@ -35,7 +35,7 @@ function setSort(column) {
     populateWindowsList();
 }
 
-function showWindowInfo(windowData) {
+async function showWindowInfo(windowData) {
     const detailsContainer = document.querySelector('#window-details');
     const detailsContent = document.querySelector('#window-details-content');
 
@@ -81,6 +81,13 @@ function showWindowInfo(windowData) {
 
         const thead = document.createElement('thead');
         const headerRow = document.createElement('tr');
+
+        const selectAllTh = document.createElement('th');
+        const selectAllCheckbox = document.createElement('input');
+        selectAllCheckbox.type = 'checkbox';
+        selectAllTh.appendChild(selectAllCheckbox);
+        headerRow.appendChild(selectAllTh);
+
         for (const heading of ['#', 'Title', 'URL', 'Loaded', '']) {
             const th = document.createElement('th');
             th.textContent = heading;
@@ -89,9 +96,82 @@ function showWindowInfo(windowData) {
         thead.appendChild(headerRow);
         tabsTable.appendChild(thead);
 
+        // Bulk action bar
+        const bulkBar = document.createElement('div');
+        bulkBar.className = 'bulk-action-bar';
+
+        const bulkLabel = document.createElement('span');
+        bulkBar.appendChild(bulkLabel);
+
+        const bulkCloseBtn = document.createElement('button');
+        bulkCloseBtn.textContent = 'Close selected';
+        bulkBar.appendChild(bulkCloseBtn);
+
+        const bulkMoveLabel = document.createElement('label');
+        bulkMoveLabel.textContent = 'Move to: ';
+        const bulkMoveSelect = document.createElement('select');
+        bulkMoveLabel.appendChild(bulkMoveSelect);
+        bulkBar.appendChild(bulkMoveLabel);
+
+        const bulkMoveBtn = document.createElement('button');
+        bulkMoveBtn.textContent = 'Move';
+        bulkBar.appendChild(bulkMoveBtn);
+
+        // Populate move target dropdown with other windows
+        const allWindows = await browser.windows.getAll();
+        for (const win of allWindows) {
+            if (win.id === windowData.window.id) continue;
+            const option = document.createElement('option');
+            option.value = win.id;
+            const title = await dataStore.getTitleForWindow(win.id);
+            option.textContent = title || `Window ${win.id}`;
+            bulkMoveSelect.appendChild(option);
+        }
+
+        function getCheckedTabIds() {
+            return [...tbody.querySelectorAll('input[type=checkbox]:checked')]
+                .map(cb => parseInt(cb.dataset.tabId));
+        }
+
+        function updateBulkBar() {
+            const checked = getCheckedTabIds();
+            const visible = checked.length > 0;
+            bulkBar.classList.toggle('visible', visible);
+            bulkLabel.textContent = `${checked.length} tab${checked.length !== 1 ? 's' : ''} selected`;
+            selectAllCheckbox.checked = checked.length === tabs.length;
+            selectAllCheckbox.indeterminate = checked.length > 0 && checked.length < tabs.length;
+        }
+
+        selectAllCheckbox.addEventListener('change', () => {
+            tbody.querySelectorAll('input[type=checkbox]').forEach(cb => {
+                cb.checked = selectAllCheckbox.checked;
+            });
+            updateBulkBar();
+        });
+
+        bulkCloseBtn.addEventListener('click', async () => {
+            const ids = getCheckedTabIds();
+            if (!confirm(`Close ${ids.length} tab${ids.length !== 1 ? 's' : ''}?`)) return;
+            await browser.tabs.remove(ids);
+        });
+
+        bulkMoveBtn.addEventListener('click', async () => {
+            const targetWindowId = parseInt(bulkMoveSelect.value);
+            if (!targetWindowId) return;
+            await browser.tabs.move(getCheckedTabIds(), {windowId: targetWindowId, index: -1});
+        });
+
         const tbody = document.createElement('tbody');
         tabs.forEach((tab, index) => {
             const row = document.createElement('tr');
+
+            const checkCell = document.createElement('td');
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.dataset.tabId = tab.id;
+            checkbox.addEventListener('change', updateBulkBar);
+            checkCell.appendChild(checkbox);
+            row.appendChild(checkCell);
 
             const indexCell = document.createElement('td');
             indexCell.textContent = index + 1;
@@ -226,6 +306,7 @@ function showWindowInfo(windowData) {
         tabsTable.appendChild(tbody);
 
         detailsContent.appendChild(tabsTable);
+        detailsContent.appendChild(bulkBar);
     }
 
     selectedWindowId = windowData.window.id;
