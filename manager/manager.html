@@ -159,18 +159,36 @@
 
         .tabs-table th:first-child,
         .tabs-table td:first-child,
-        .tabs-table th:nth-child(n+4),
-        .tabs-table td:nth-child(n+4) {
+        .tabs-table th:nth-child(2),
+        .tabs-table td:nth-child(2),
+        .tabs-table th:nth-child(n+5),
+        .tabs-table td:nth-child(n+5) {
             width: 1px;
             white-space: nowrap;
         }
 
-        .tabs-table th:nth-child(2),
-        .tabs-table td:nth-child(2) {
+        .tabs-table th:nth-child(3),
+        .tabs-table td:nth-child(3) {
             white-space: nowrap;
             max-width: 50em;
             overflow: hidden;
             text-overflow: ellipsis;
+        }
+
+        .bulk-action-bar {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            margin-top: 6px;
+            padding: 4px 6px;
+            background-color: #eef;
+            border: 1px solid #ccd;
+            border-radius: 4px;
+            font-size: 11px;
+        }
+
+        .bulk-action-bar.visible {
+            display: flex;
         }
     </style>
 </head>
