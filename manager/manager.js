@@ -61,9 +61,7 @@ async function showWindowInfo(windowData) {
     detailsContent.appendChild(createDetailRow('Title', windowData.displayTitle));
     detailsContent.appendChild(createDetailRow('Tabs', windowData.tabCount.toString()));
 
-    if (windowData.isCurrentWindow) {
-        detailsContent.appendChild(createDetailRow('Current', 'Yes'));
-    }
+    detailsContent.appendChild(createDetailRow('Current', windowData.isCurrentWindow ? 'Yes' : 'No'));
 
     detailsContent.appendChild(createDetailRow('ID', windowData.window.id.toString()));
     if (windowData.window.type) {
