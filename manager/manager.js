@@ -61,7 +61,17 @@ async function showWindowInfo(windowData) {
     detailsContent.appendChild(createDetailRow('Title', windowData.displayTitle));
     detailsContent.appendChild(createDetailRow('Tabs', windowData.tabCount.toString()));
 
-    detailsContent.appendChild(createDetailRow('Current', windowData.isCurrentWindow ? 'Yes' : 'No'));
+    const currentBadge = document.createElement('span');
+    currentBadge.className = windowData.isCurrentWindow ? 'status-badge current' : 'status-badge open';
+    currentBadge.textContent = windowData.isCurrentWindow ? 'Yes' : 'No';
+    const currentRow = document.createElement('div');
+    currentRow.className = 'detail-row';
+    const currentLabel = document.createElement('span');
+    currentLabel.className = 'detail-label';
+    currentLabel.textContent = 'Current:';
+    currentRow.appendChild(currentLabel);
+    currentRow.appendChild(currentBadge);
+    detailsContent.appendChild(currentRow);
 
     detailsContent.appendChild(createDetailRow('ID', windowData.window.id.toString()));
     if (windowData.window.type) {
@@ -86,11 +96,13 @@ async function showWindowInfo(windowData) {
         selectAllTh.appendChild(selectAllCheckbox);
         headerRow.appendChild(selectAllTh);
 
-        for (const heading of ['#', 'Title', 'URL', 'Loaded', '']) {
+        for (const heading of ['#', 'Title', 'URL', '', '']) {
             const th = document.createElement('th');
             th.textContent = heading;
             headerRow.appendChild(th);
         }
+        // Give the loaded-dot column a tooltip header
+        headerRow.children[4].title = 'Loaded (green) / Unloaded (gray)';
         thead.appendChild(headerRow);
         tabsTable.appendChild(thead);
 
@@ -162,6 +174,7 @@ async function showWindowInfo(windowData) {
         const tbody = document.createElement('tbody');
         tabs.forEach((tab, index) => {
             const row = document.createElement('tr');
+            if (tab.discarded) row.classList.add('tab-unloaded');
 
             const checkCell = document.createElement('td');
             const checkbox = document.createElement('input');
@@ -384,11 +397,21 @@ async function populateWindowsList() {
         });
 
         const titleCell = document.createElement('td');
+        const titleWrapper = document.createElement('div');
+        titleWrapper.className = 'title-cell';
         const titleSpan = document.createElement('span');
         titleSpan.textContent = data.displayTitle;
         titleSpan.title = 'Click to edit';
         titleSpan.style.cursor = 'text';
         if (data.isCurrentWindow) titleSpan.style.fontWeight = 'bold';
+        const editIcon = document.createElement('img');
+        editIcon.src = '/icons/edit.png';
+        editIcon.className = 'title-edit-icon';
+        editIcon.alt = '';
+        titleWrapper.appendChild(titleSpan);
+        titleWrapper.appendChild(editIcon);
+        titleCell.appendChild(titleWrapper);
+
         titleSpan.addEventListener('click', (e) => {
             e.stopPropagation();
             const input = document.createElement('input');
@@ -419,7 +442,6 @@ async function populateWindowsList() {
             });
             input.addEventListener('blur', commit);
         });
-        titleCell.appendChild(titleSpan);
         row.appendChild(titleCell);
 
         const tabsCell = document.createElement('td');

@@ -258,6 +258,24 @@
             box-shadow: 0 0 0 2px rgba(29, 87, 165, 0.15);
         }
 
+        .title-cell {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .title-edit-icon {
+            width: 12px;
+            height: 12px;
+            opacity: 0;
+            flex-shrink: 0;
+            transition: opacity 0.12s;
+        }
+
+        #windows-table tbody tr:hover .title-edit-icon { opacity: 0.4; }
+
+        .tabs-table tr.tab-unloaded { opacity: 0.55; }
+
         #window-details-content {
             padding: 10px 12px;
             font-size: 11px;
@@ -401,7 +419,7 @@
 
         .action-btn:hover {
             background: var(--row-hover);
-            border-color: #c8bfb5;
+            border-color: #a0b0c8;
         }
 
         .action-btn:active { transform: translateY(1px); }
