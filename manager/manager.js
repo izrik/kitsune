@@ -61,9 +61,17 @@ async function showWindowInfo(windowData) {
     detailsContent.appendChild(createDetailRow('Title', windowData.displayTitle));
     detailsContent.appendChild(createDetailRow('Tabs', windowData.tabCount.toString()));
 
-    if (windowData.isCurrentWindow) {
-        detailsContent.appendChild(createDetailRow('Current', 'Yes'));
-    }
+    const currentBadge = document.createElement('span');
+    currentBadge.className = windowData.isCurrentWindow ? 'status-badge current' : 'status-badge open';
+    currentBadge.textContent = windowData.isCurrentWindow ? 'Yes' : 'No';
+    const currentRow = document.createElement('div');
+    currentRow.className = 'detail-row';
+    const currentLabel = document.createElement('span');
+    currentLabel.className = 'detail-label';
+    currentLabel.textContent = 'Current:';
+    currentRow.appendChild(currentLabel);
+    currentRow.appendChild(currentBadge);
+    detailsContent.appendChild(currentRow);
 
     detailsContent.appendChild(createDetailRow('ID', windowData.window.id.toString()));
     if (windowData.window.type) {
@@ -88,11 +96,13 @@ async function showWindowInfo(windowData) {
         selectAllTh.appendChild(selectAllCheckbox);
         headerRow.appendChild(selectAllTh);
 
-        for (const heading of ['#', 'Title', 'URL', 'Loaded', '']) {
+        for (const heading of ['#', 'Title', 'URL', '', '']) {
             const th = document.createElement('th');
             th.textContent = heading;
             headerRow.appendChild(th);
         }
+        // Give the loaded-dot column a tooltip header
+        headerRow.children[4].title = 'Loaded (green) / Unloaded (gray)';
         thead.appendChild(headerRow);
         tabsTable.appendChild(thead);
 
@@ -164,6 +174,7 @@ async function showWindowInfo(windowData) {
         const tbody = document.createElement('tbody');
         tabs.forEach((tab, index) => {
             const row = document.createElement('tr');
+            if (tab.discarded) row.classList.add('tab-unloaded');
 
             const checkCell = document.createElement('td');
             const checkbox = document.createElement('input');
@@ -178,9 +189,10 @@ async function showWindowInfo(windowData) {
             row.appendChild(indexCell);
 
             const titleCell = document.createElement('td');
-            titleCell.style.display = 'flex';
-            titleCell.style.alignItems = 'center';
-            titleCell.style.gap = '4px';
+            const titleInner = document.createElement('div');
+            titleInner.style.display = 'flex';
+            titleInner.style.alignItems = 'center';
+            titleInner.style.gap = '4px';
             if (tab.favIconUrl) {
                 const favicon = document.createElement('img');
                 favicon.src = tab.favIconUrl;
@@ -188,14 +200,15 @@ async function showWindowInfo(windowData) {
                 favicon.style.height = '16px';
                 favicon.style.flexShrink = '0';
                 favicon.onerror = () => favicon.remove();
-                titleCell.appendChild(favicon);
+                titleInner.appendChild(favicon);
             }
             const titleText = document.createElement('span');
             titleText.textContent = tab.title || 'Untitled';
             titleText.style.overflow = 'hidden';
             titleText.style.textOverflow = 'ellipsis';
             titleText.style.whiteSpace = 'nowrap';
-            titleCell.appendChild(titleText);
+            titleInner.appendChild(titleText);
+            titleCell.appendChild(titleInner);
             row.appendChild(titleCell);
 
             const urlCell = document.createElement('td');
@@ -203,7 +216,10 @@ async function showWindowInfo(windowData) {
             row.appendChild(urlCell);
 
             const loadedCell = document.createElement('td');
-            loadedCell.textContent = tab.discarded ? 'No' : 'Yes';
+            const loadedDot = document.createElement('span');
+            loadedDot.className = tab.discarded ? 'loaded-dot no' : 'loaded-dot yes';
+            loadedDot.title = tab.discarded ? 'Unloaded' : 'Loaded';
+            loadedCell.appendChild(loadedDot);
             row.appendChild(loadedCell);
 
             const actionsCell = document.createElement('td');
@@ -310,6 +326,7 @@ async function showWindowInfo(windowData) {
     }
 
     selectedWindowId = windowData.window.id;
+    document.querySelector('#window-details-placeholder').style.display = 'none';
     detailsContainer.classList.add('visible');
     detailsContainer.scrollIntoView({behavior: 'smooth', block: 'nearest'});
 }
@@ -317,6 +334,7 @@ async function showWindowInfo(windowData) {
 function hideWindowInfo() {
     selectedWindowId = null;
     document.querySelector('#window-details').classList.remove('visible');
+    document.querySelector('#window-details-placeholder').style.display = '';
 }
 
 async function populateWindowsList() {
@@ -335,13 +353,12 @@ async function populateWindowsList() {
 
     const windowDatas = [];
     for (const window of windows) {
-        let displayTitle = await dataStore.getTitleForWindow(window.id);
-        if (!displayTitle) {
-            displayTitle = 'Window ' + window.id;
-        }
+        const storedTitle = await dataStore.getTitleForWindow(window.id);
+        const displayTitle = storedTitle || 'Window ' + window.id;
         windowDatas.push({
             window,
             displayTitle,
+            storedTitle: storedTitle || '',
             tabCount: window.tabs.length,
             isCurrentWindow: window.id === currentWindow.id,
         });
@@ -380,16 +397,65 @@ async function populateWindowsList() {
         });
 
         const titleCell = document.createElement('td');
-        titleCell.textContent = data.displayTitle;
-        if (data.isCurrentWindow) titleCell.style.fontWeight = 'bold';
+        const titleWrapper = document.createElement('div');
+        titleWrapper.className = 'title-cell';
+        const titleSpan = document.createElement('span');
+        titleSpan.textContent = data.displayTitle;
+        titleSpan.title = 'Click to edit';
+        titleSpan.style.cursor = 'text';
+        if (data.isCurrentWindow) titleSpan.style.fontWeight = 'bold';
+        const editIcon = document.createElement('img');
+        editIcon.src = '/icons/edit.png';
+        editIcon.className = 'title-edit-icon';
+        editIcon.alt = '';
+        titleWrapper.appendChild(titleSpan);
+        titleWrapper.appendChild(editIcon);
+        titleCell.appendChild(titleWrapper);
+
+        titleSpan.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = data.storedTitle;
+            input.className = 'title-edit-input';
+            input.placeholder = 'Window name…';
+            titleCell.replaceChildren(input);
+            input.focus();
+            input.select();
+            let committed = false;
+            async function commit() {
+                if (committed) return;
+                committed = true;
+                const newTitle = input.value.trim();
+                await dataStore.saveTitleForWindow(data.window.id, newTitle);
+                await dataStore.refreshAppearanceForWindow(data.window.id);
+                scheduleRefresh();
+            }
+            function cancel() {
+                if (committed) return;
+                committed = true;
+                titleCell.replaceChildren(titleSpan);
+            }
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') { e.preventDefault(); commit(); }
+                if (e.key === 'Escape') { cancel(); }
+            });
+            input.addEventListener('blur', commit);
+        });
         row.appendChild(titleCell);
 
         const tabsCell = document.createElement('td');
-        tabsCell.textContent = data.tabCount;
+        const tabsBadge = document.createElement('span');
+        tabsBadge.className = 'tab-count-badge';
+        tabsBadge.textContent = data.tabCount;
+        tabsCell.appendChild(tabsBadge);
         row.appendChild(tabsCell);
 
         const statusCell = document.createElement('td');
-        statusCell.textContent = data.isCurrentWindow ? 'Current' : 'Open';
+        const statusBadge = document.createElement('span');
+        statusBadge.className = data.isCurrentWindow ? 'status-badge current' : 'status-badge open';
+        statusBadge.textContent = data.isCurrentWindow ? 'Current' : 'Open';
+        statusCell.appendChild(statusBadge);
         row.appendChild(statusCell);
 
         const actionsCell = document.createElement('td');
@@ -571,6 +637,9 @@ window.onload = async () => {
 
     updateSortHeaders();
     await populateWindowsList();
+
+    document.querySelector('#window-details-close').addEventListener('click', hideWindowInfo);
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hideWindowInfo(); });
 
     document.querySelector('#export-button').addEventListener('click', exportWindowsData);
     document.querySelector('#minimize-all-windows-button').addEventListener('click', minimizeAllWindows);

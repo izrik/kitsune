@@ -24,7 +24,14 @@
   "action": {
     "default_icon": "icons/kitsune_thick.svg",
     "default_title": "Kitsune",
-    "default_popup": "popup/popup.html"
+    "default_popup": "popup/popup.html",
+    "theme_icons": [
+      {
+        "light": "icons/kitsune_thick_white.svg",
+        "dark": "icons/kitsune_thick.svg",
+        "size": 48
+      }
+    ]
   },
 
   "browser_specific_settings": {
