@@ -176,9 +176,10 @@ async function showWindowInfo(windowData) {
             row.appendChild(indexCell);
 
             const titleCell = document.createElement('td');
-            titleCell.style.display = 'flex';
-            titleCell.style.alignItems = 'center';
-            titleCell.style.gap = '4px';
+            const titleInner = document.createElement('div');
+            titleInner.style.display = 'flex';
+            titleInner.style.alignItems = 'center';
+            titleInner.style.gap = '4px';
             if (tab.favIconUrl) {
                 const favicon = document.createElement('img');
                 favicon.src = tab.favIconUrl;
@@ -186,14 +187,15 @@ async function showWindowInfo(windowData) {
                 favicon.style.height = '16px';
                 favicon.style.flexShrink = '0';
                 favicon.onerror = () => favicon.remove();
-                titleCell.appendChild(favicon);
+                titleInner.appendChild(favicon);
             }
             const titleText = document.createElement('span');
             titleText.textContent = tab.title || 'Untitled';
             titleText.style.overflow = 'hidden';
             titleText.style.textOverflow = 'ellipsis';
             titleText.style.whiteSpace = 'nowrap';
-            titleCell.appendChild(titleText);
+            titleInner.appendChild(titleText);
+            titleCell.appendChild(titleInner);
             row.appendChild(titleCell);
 
             const urlCell = document.createElement('td');
