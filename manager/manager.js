@@ -587,6 +587,43 @@ async function exportWindowsData() {
     }
 }
 
+async function importWindowsData(file) {
+    let data;
+    try {
+        data = JSON.parse(await file.text());
+    } catch (e) {
+        alert('Error reading import file: ' + e.message);
+        return;
+    }
+
+    if (!Array.isArray(data.windows)) {
+        alert('Invalid import file: missing windows array.');
+        return;
+    }
+
+    const validWindows = data.windows.filter(w => w.tabs?.some(t => t.url));
+    if (validWindows.length === 0) {
+        alert('No importable windows found in file.');
+        return;
+    }
+
+    const tabCount = validWindows.reduce((sum, w) => sum + w.tabs.filter(t => t.url).length, 0);
+    if (!confirm(`Open ${validWindows.length} window${validWindows.length !== 1 ? 's' : ''} with ${tabCount} tab${tabCount !== 1 ? 's' : ''}?`)) return;
+
+    for (const windowData of validWindows) {
+        const urls = windowData.tabs.map(t => t.url).filter(u => u);
+        const newWindow = await browser.windows.create({url: urls[0]});
+        for (let i = 1; i < urls.length; i++) {
+            await browser.tabs.create({windowId: newWindow.id, url: urls[i]});
+        }
+        const title = windowData.title || '';
+        if (title && !/^Window \d+$/.test(title)) {
+            await dataStore.saveTitleForWindow(newWindow.id, title);
+            await dataStore.refreshAppearanceForWindow(newWindow.id);
+        }
+    }
+}
+
 async function reloadAllTabsInWindow(windowId) {
     const win = await browser.windows.get(windowId, {populate: true});
     for (const tab of win.tabs) {
@@ -642,6 +679,15 @@ window.onload = async () => {
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hideWindowInfo(); });
 
     document.querySelector('#export-button').addEventListener('click', exportWindowsData);
+
+    const importFileInput = document.querySelector('#import-file-input');
+    document.querySelector('#import-button').addEventListener('click', () => importFileInput.click());
+    importFileInput.addEventListener('change', async () => {
+        if (importFileInput.files[0]) {
+            await importWindowsData(importFileInput.files[0]);
+            importFileInput.value = '';
+        }
+    });
     document.querySelector('#minimize-all-windows-button').addEventListener('click', minimizeAllWindows);
     document.querySelector('#unload-all-tabs-button').addEventListener('click', unloadAllTabs);
     document.querySelector('#refresh-appearance-button').addEventListener('click', refreshAppearanceForAllWindows);
