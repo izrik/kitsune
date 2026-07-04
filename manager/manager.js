@@ -129,12 +129,15 @@ async function showWindowInfo(windowData) {
 
         // Populate move target dropdown with other windows
         const allWindows = await browser.windows.getAll();
+        const otherWindowOptions = [];
         for (const win of allWindows) {
             if (win.id === windowData.window.id) continue;
+            const title = await dataStore.getTitleForWindow(win.id);
+            const label = title || `Window ${win.id}`;
+            otherWindowOptions.push({id: win.id, label});
             const option = document.createElement('option');
             option.value = win.id;
-            const title = await dataStore.getTitleForWindow(win.id);
-            option.textContent = title || `Window ${win.id}`;
+            option.textContent = label;
             bulkMoveSelect.appendChild(option);
         }
 
@@ -281,6 +284,31 @@ async function showWindowInfo(windowData) {
             moveBtn.appendChild(moveIcon);
             moveBtn.addEventListener('click', () => browser.windows.create({tabId: tab.id}));
             actionsCell.appendChild(moveBtn);
+
+            if (otherWindowOptions.length > 0) {
+                const moveSelect = document.createElement('select');
+                moveSelect.className = 'move-to-select';
+                moveSelect.title = 'Move to window';
+                const placeholder = document.createElement('option');
+                placeholder.value = '';
+                placeholder.textContent = 'Move to…';
+                placeholder.disabled = true;
+                placeholder.selected = true;
+                moveSelect.appendChild(placeholder);
+                for (const opt of otherWindowOptions) {
+                    const option = document.createElement('option');
+                    option.value = opt.id;
+                    option.textContent = opt.label;
+                    moveSelect.appendChild(option);
+                }
+                moveSelect.addEventListener('change', async () => {
+                    const targetWindowId = parseInt(moveSelect.value);
+                    if (targetWindowId) {
+                        await browser.tabs.move(tab.id, {windowId: targetWindowId, index: -1});
+                    }
+                });
+                actionsCell.appendChild(moveSelect);
+            }
 
             const dupBtn = document.createElement('button');
             dupBtn.className = 'window-btn';
