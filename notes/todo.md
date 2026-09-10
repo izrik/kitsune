@@ -17,6 +17,9 @@ Not blocking 1.0. See `v1-features.md` for what is.
   closed windows and their stored titles for restoring.
 - **Import de-duplication.** Import always opens new windows; it never merges into, or
   skips, windows that are already open.
+- **Cancelling an import.** A large import runs for minutes with no way to stop it
+  short of closing the manager tab, which leaves the windows created so far in place.
+  The progress line would be the natural place to put a cancel button.
 - **`_locales`.** No internationalization at all. Nice for AMO, not needed for 1.0.
 
 ## Release chores

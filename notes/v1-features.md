@@ -3,12 +3,14 @@
 Scope for the 1.0 release. Everything in this file is a blocker; anything that can
 ship later lives in `todo.md`.
 
+**Status:** 1 and 2 are done. 3 and 4 remain.
+
 The premise of 1.0 is not new surface area — it is that the manager actually works at
 the size it is used at. The most recent export in `instance/` holds **201 windows and
 3,190 tabs**, and `tools/import.js` restores **189 window titles** by hand. Features
 that are fine with five windows fall over at two hundred.
 
-## 1. Import cannot read older export files
+## 1. Import cannot read older export files — DONE (`d86f0e8`)
 
 The importer added in `69dea40` requires a top-level `windows` array:
 
@@ -29,7 +31,11 @@ windows carry `{id, title, state, tabs}`, tabs carry `{title, url}`.
 **Done when:** every file in `instance/` imports without an error, and a current-format
 export still imports.
 
-## 2. Import does not survive a large file
+**Outcome:** `windowsFromImportData()` falls back to the legacy keys, merging both
+arrays. Verified against all four files on disk (2, 2, 218 and 201 windows). One of
+them holds a sleeping window that an `openWindows`-only fallback would have dropped.
+
+## 2. Import does not survive a large file — DONE (`93f48df`)
 
 `importWindowsData()` creates every window and every tab eagerly and serially:
 
@@ -49,6 +55,23 @@ available, fall back to batching with a progress indicator.
 
 **Done when:** the 201-window backup imports without saturating the browser, and the
 confirm dialog warns when the file is large.
+
+**Outcome:** tabs are created with `discarded: true` (Firefox allows `title` only
+alongside it, which keeps the tab strip readable), so only one tab per window loads —
+`windows.create` always loads what it opens, so that is the floor. A safety valve
+aborts if discarding fails repeatedly, rather than falling back to loading everything.
+
+Two things turned up that were not in the original plan. Firefox rejects privileged
+URLs — `chrome:`, `javascript:`, `data:`, `file:`, and every `about:` page except
+`about:blank` — and the first tab of a window goes through `windows.create`, so a
+window starting on `about:home` aborted the whole import. Those URLs are now
+classified up front, skipped, and counted; 485 of the 3,220 tabs in the largest backup
+are unrestorable, and 36 windows have nothing restorable at all (they are still
+created, so their titles survive). Separately, the action buttons are disabled during
+an import and re-entry is blocked, because two concurrent imports would interleave and
+the first to finish would clear the `importing` flag out from under the other.
+
+Confirmed working on a real import of the large file.
 
 ## 3. The manager's refresh does not scale
 

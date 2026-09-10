@@ -10,6 +10,17 @@ let selectedWindowId = null;
 let refreshTimer = null;
 let importing = false;
 
+// The action buttons all operate on "every window as it is right now", which is not a
+// stable idea while an import is creating windows: windows.getAll() would snapshot a
+// moving target, half-applying the action, and confirm() would block the import loop
+// outright. Import re-entry is the worst of them - two concurrent imports interleave
+// and the first to finish clears `importing` while the other is still running.
+function setActionsEnabled(enabled) {
+    for (const button of document.querySelectorAll('#actions-toolbar .action-btn')) {
+        button.disabled = !enabled;
+    }
+}
+
 function scheduleRefresh() {
     // An import fires tabs.onCreated once per tab. Rebuilding the list thousands of
     // times mid-import is pure waste; it is refreshed once when the import finishes.
@@ -692,6 +703,8 @@ async function createImportedTabs(windowId, tabs, onTabDone) {
 }
 
 async function importWindowsData(file) {
+    if (importing) return;
+
     let data;
     try {
         data = JSON.parse(await file.text());
@@ -758,6 +771,7 @@ async function importWindowsData(file) {
     };
 
     importing = true;
+    setActionsEnabled(false);
     status.hidden = false;
     showProgress();
 
@@ -798,6 +812,7 @@ async function importWindowsData(file) {
         alert(`Import stopped after ${plural(windowsDone, 'window')}.\n\n${e.message}`);
     } finally {
         importing = false;
+        setActionsEnabled(true);
         status.hidden = true;
         status.textContent = '';
         await populateWindowsList();
