@@ -9,6 +9,14 @@ let sortDirection = 'asc';
 let selectedWindowId = null;
 let refreshTimer = null;
 let importing = false;
+// The windows and titles from the last refresh, reused by showWindowInfo so that
+// opening a window's details does not re-query every window all over again.
+let lastWindowDatas = [];
+// Set while a window title is being edited inline, so a refresh cannot rebuild the
+// table out from under the input.
+let editingWindowId = null;
+
+const REFRESH_DEBOUNCE_MS = 500;
 
 // The action buttons all operate on "every window as it is right now", which is not a
 // stable idea while an import is creating windows: windows.getAll() would snapshot a
@@ -25,8 +33,11 @@ function scheduleRefresh() {
     // An import fires tabs.onCreated once per tab. Rebuilding the list thousands of
     // times mid-import is pure waste; it is refreshed once when the import finishes.
     if (importing) return;
+    // A refresh rebuilds the whole table, which would tear out an in-progress inline
+    // title edit along with whatever has been typed into it.
+    if (editingWindowId !== null) return;
     clearTimeout(refreshTimer);
-    refreshTimer = setTimeout(populateWindowsList, 200);
+    refreshTimer = setTimeout(populateWindowsList, REFRESH_DEBOUNCE_MS);
 }
 
 function updateSortHeaders() {
@@ -142,17 +153,17 @@ async function showWindowInfo(windowData) {
         bulkMoveBtn.textContent = 'Move';
         bulkBar.appendChild(bulkMoveBtn);
 
-        // Populate move target dropdown with other windows
-        const allWindows = await browser.windows.getAll();
-        const otherWindowOptions = [];
-        for (const win of allWindows) {
-            if (win.id === windowData.window.id) continue;
-            const title = await dataStore.getTitleForWindow(win.id);
-            const label = title || `Window ${win.id}`;
-            otherWindowOptions.push({id: win.id, label});
+        // Reuse the titles from the last list refresh. Querying them again here meant a
+        // second windows.getAll() plus another sessions read per window, doubling the
+        // cost of every refresh whenever a window was selected.
+        const otherWindowOptions = lastWindowDatas
+            .filter(d => d.window.id !== windowData.window.id)
+            .map(d => ({id: d.window.id, label: d.displayTitle}));
+
+        for (const opt of otherWindowOptions) {
             const option = document.createElement('option');
-            option.value = win.id;
-            option.textContent = label;
+            option.value = opt.id;
+            option.textContent = opt.label;
             bulkMoveSelect.appendChild(option);
         }
 
@@ -394,18 +405,19 @@ async function populateWindowsList() {
     document.querySelector('#total-tab-count').textContent = totalTabs;
     document.querySelector('#current-window-tab-count').textContent = currentWindowTabs;
 
-    const windowDatas = [];
-    for (const window of windows) {
-        const storedTitle = await dataStore.getTitleForWindow(window.id);
-        const displayTitle = storedTitle || 'Window ' + window.id;
-        windowDatas.push({
-            window,
-            displayTitle,
-            storedTitle: storedTitle || '',
-            tabCount: window.tabs.length,
-            isCurrentWindow: window.id === currentWindow.id,
-        });
-    }
+    // One sessions round trip per window, issued together rather than one after another.
+    // Serially this dominated the cost of a refresh: a few hundred windows meant a few
+    // hundred sequential IPC calls, repeated on every tab event.
+    const storedTitles = await Promise.all(windows.map(w => dataStore.getTitleForWindow(w.id)));
+
+    const windowDatas = windows.map((window, i) => ({
+        window,
+        displayTitle: storedTitles[i] || 'Window ' + window.id,
+        storedTitle: storedTitles[i] || '',
+        tabCount: window.tabs.length,
+        isCurrentWindow: window.id === currentWindow.id,
+    }));
+    lastWindowDatas = windowDatas;
 
     windowDatas.sort((a, b) => {
         let cmp = 0;
@@ -465,10 +477,12 @@ async function populateWindowsList() {
             titleCell.replaceChildren(input);
             input.focus();
             input.select();
+            editingWindowId = data.window.id;
             let committed = false;
             async function commit() {
                 if (committed) return;
                 committed = true;
+                editingWindowId = null;
                 const newTitle = input.value.trim();
                 await dataStore.saveTitleForWindow(data.window.id, newTitle);
                 await dataStore.refreshAppearanceForWindow(data.window.id);
@@ -477,6 +491,7 @@ async function populateWindowsList() {
             function cancel() {
                 if (committed) return;
                 committed = true;
+                editingWindowId = null;
                 titleCell.replaceChildren(titleSpan);
             }
             input.addEventListener('keydown', (e) => {
