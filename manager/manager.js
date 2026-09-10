@@ -8,8 +8,12 @@ let sortColumn = 'title';
 let sortDirection = 'asc';
 let selectedWindowId = null;
 let refreshTimer = null;
+let importing = false;
 
 function scheduleRefresh() {
+    // An import fires tabs.onCreated once per tab. Rebuilding the list thousands of
+    // times mid-import is pure waste; it is refreshed once when the import finishes.
+    if (importing) return;
     clearTimeout(refreshTimer);
     refreshTimer = setTimeout(populateWindowsList, 200);
 }
@@ -628,6 +632,65 @@ function windowsFromImportData(data) {
     return null;
 }
 
+// Import safety valve: if this many tabs refuse to be created unloaded, something is
+// wrong with the API rather than with individual URLs, and continuing would load every
+// remaining tab at once. Stop instead.
+const LOADED_FALLBACK_LIMIT = 20;
+const LARGE_IMPORT_WINDOWS = 25;
+
+// Thrown only for conditions that should stop the whole import, so that the per-window
+// error handling can tell them apart from one window failing to open.
+class ImportAbort extends Error {}
+
+// Firefox refuses to open privileged URLs from an extension - it rejects them with
+// "Illegal URL" - and there is no way around it. Exports are full of them (about:home
+// and about:newtab especially), so they are skipped and counted rather than treated as
+// errors. about:blank is the one about: page extensions may open.
+const PRIVILEGED_SCHEMES = ['chrome:', 'javascript:', 'data:', 'file:'];
+
+function isRestorableUrl(url) {
+    if (!url) return false;
+    const scheme = url.slice(0, url.indexOf(':') + 1).toLowerCase();
+    if (scheme === 'about:') return url.split(/[?#]/)[0].toLowerCase() === 'about:blank';
+    return !PRIVILEGED_SCHEMES.includes(scheme);
+}
+
+// Firefox accepts `title` only on a tab created with `discarded: true` - which is what
+// keeps the tab strip readable when nothing has loaded yet. A URL that refuses to be
+// created discarded (privileged pages, mainly) is retried as a normal tab.
+async function createImportedTabs(windowId, tabs, onTabDone) {
+    let loadedFallbacks = 0;
+    const failures = [];
+
+    for (const [i, tab] of tabs.entries()) {
+        const props = {windowId, url: tab.url, active: false, index: i + 1};
+        try {
+            await browser.tabs.create({
+                ...props,
+                discarded: true,
+                ...(tab.title ? {title: tab.title} : {}),
+            });
+        } catch (e) {
+            console.debug(`createImportedTabs: could not discard ${tab.url}:`, e);
+            if (++loadedFallbacks > LOADED_FALLBACK_LIMIT) {
+                throw new ImportAbort(
+                    `${loadedFallbacks} tabs could not be created in an unloaded state. ` +
+                    'Stopping rather than loading every remaining tab at once.'
+                );
+            }
+            try {
+                await browser.tabs.create(props);
+            } catch (e2) {
+                console.debug(`createImportedTabs: could not create ${tab.url}:`, e2);
+                failures.push(tab.url);
+            }
+        }
+        onTabDone?.();
+    }
+
+    return failures;
+}
+
 async function importWindowsData(file) {
     let data;
     try {
@@ -643,27 +706,117 @@ async function importWindowsData(file) {
         return;
     }
 
-    const validWindows = importedWindows.filter(w => w.tabs?.some(t => t.url));
-    if (validWindows.length === 0) {
+    const plural = (n, word) => `${n} ${word}${n !== 1 ? 's' : ''}`;
+
+    // Work out what is actually openable before touching the browser, so the counts in
+    // the confirm dialog are the counts the user will get.
+    const plans = importedWindows
+        .map(w => {
+            const tabs = (w.tabs ?? []).filter(t => t.url);
+            return {
+                title: w.title || '',
+                restorable: tabs.filter(t => isRestorableUrl(t.url)),
+                skipped: tabs.filter(t => !isRestorableUrl(t.url)).map(t => t.url),
+            };
+        })
+        .filter(plan => plan.restorable.length > 0 || plan.skipped.length > 0);
+
+    if (plans.length === 0) {
         alert('No importable windows found in file.');
         return;
     }
 
-    const tabCount = validWindows.reduce((sum, w) => sum + w.tabs.filter(t => t.url).length, 0);
-    if (!confirm(`Open ${validWindows.length} window${validWindows.length !== 1 ? 's' : ''} with ${tabCount} tab${tabCount !== 1 ? 's' : ''}?`)) return;
+    const tabCount = plans.reduce((sum, plan) => sum + plan.restorable.length, 0);
+    const skipped = plans.flatMap(plan => plan.skipped);
 
-    for (const windowData of validWindows) {
-        const urls = windowData.tabs.map(t => t.url).filter(u => u);
-        const newWindow = await browser.windows.create({url: urls[0]});
-        for (let i = 1; i < urls.length; i++) {
-            await browser.tabs.create({windowId: newWindow.id, url: urls[i]});
-        }
-        const title = windowData.title || '';
-        if (title && !/^Window \d+$/.test(title)) {
-            await dataStore.saveTitleForWindow(newWindow.id, title);
-            await dataStore.refreshAppearanceForWindow(newWindow.id);
-        }
+    const notes = [];
+    if (skipped.length > 0) {
+        notes.push(
+            `${plural(skipped.length, 'tab')} cannot be reopened by an extension ` +
+            '(privileged pages such as about:home, and local files) and will be skipped.'
+        );
     }
+    if (plans.length > LARGE_IMPORT_WINDOWS) {
+        notes.push(
+            'Tabs are created unloaded, so they will not all load at once, but this ' +
+            'many windows will still take a while to open.'
+        );
+    }
+    const note = notes.length > 0 ? '\n\n' + notes.join('\n\n') : '';
+
+    if (!confirm(`Open ${plural(plans.length, 'window')} with ${plural(tabCount, 'tab')}?${note}`)) return;
+
+    const status = document.querySelector('#import-status');
+    let windowsDone = 0;
+    let tabsDone = 0;
+    const failures = [];
+    const windowFailures = [];
+    const showProgress = () => {
+        status.textContent =
+            `Importing… ${plural(windowsDone, 'window')} of ${plans.length}, ` +
+            `${tabsDone} of ${tabCount} tabs`;
+    };
+
+    importing = true;
+    status.hidden = false;
+    showProgress();
+
+    try {
+        for (const plan of plans) {
+            try {
+                // windows.create always loads what it opens, so the seed tab is the one
+                // tab per window that cannot be avoided loading. A window with nothing
+                // restorable still gets created - its title is worth keeping - and
+                // omitting url opens the new tab page.
+                const seed = plan.restorable[0];
+                const newWindow = await browser.windows.create(seed ? {url: seed.url} : {});
+                if (seed) {
+                    tabsDone++;
+                    showProgress();
+                }
+
+                failures.push(...await createImportedTabs(newWindow.id, plan.restorable.slice(1), () => {
+                    tabsDone++;
+                    showProgress();
+                }));
+
+                if (plan.title && !/^Window \d+$/.test(plan.title)) {
+                    await dataStore.saveTitleForWindow(newWindow.id, plan.title);
+                    await dataStore.refreshAppearanceForWindow(newWindow.id);
+                }
+            } catch (e) {
+                if (e instanceof ImportAbort) throw e;
+                // One window failing is not a reason to abandon the rest.
+                console.debug(`importWindowsData: could not import "${plan.title}":`, e);
+                windowFailures.push(plan.title || '(untitled)');
+            }
+
+            windowsDone++;
+            showProgress();
+        }
+    } catch (e) {
+        alert(`Import stopped after ${plural(windowsDone, 'window')}.\n\n${e.message}`);
+    } finally {
+        importing = false;
+        status.hidden = true;
+        status.textContent = '';
+        await populateWindowsList();
+    }
+
+    const report = [];
+    if (skipped.length > 0) {
+        console.debug('importWindowsData: skipped privileged URLs:', skipped);
+        report.push(`${plural(skipped.length, 'tab')} skipped (privileged pages or local files).`);
+    }
+    if (failures.length > 0) {
+        console.debug('importWindowsData: tabs that could not be created:', failures);
+        report.push(`${plural(failures.length, 'tab')} could not be opened.`);
+    }
+    if (windowFailures.length > 0) {
+        console.debug('importWindowsData: windows that could not be created:', windowFailures);
+        report.push(`${plural(windowFailures.length, 'window')} could not be opened.`);
+    }
+    if (report.length > 0) alert(report.join('\n') + '\n\nSee the console for details.');
 }
 
 async function reloadAllTabsInWindow(windowId) {
