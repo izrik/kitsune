@@ -615,6 +615,19 @@ async function exportWindowsData() {
     }
 }
 
+// Exports made before the sleep/wake feature was removed split windows into
+// openWindows and sleepingWindows instead of a single windows array. The sleeping
+// distinction is gone, but the windows under it are still worth importing, and the
+// fields we read (title, tabs[].url) are identical in both shapes.
+function windowsFromImportData(data) {
+    if (Array.isArray(data.windows)) return data.windows;
+
+    const legacy = ['openWindows', 'sleepingWindows'].filter(k => Array.isArray(data[k]));
+    if (legacy.length > 0) return legacy.flatMap(k => data[k]);
+
+    return null;
+}
+
 async function importWindowsData(file) {
     let data;
     try {
@@ -624,12 +637,13 @@ async function importWindowsData(file) {
         return;
     }
 
-    if (!Array.isArray(data.windows)) {
-        alert('Invalid import file: missing windows array.');
+    const importedWindows = windowsFromImportData(data);
+    if (!importedWindows) {
+        alert('Invalid import file: no windows found.');
         return;
     }
 
-    const validWindows = data.windows.filter(w => w.tabs?.some(t => t.url));
+    const validWindows = importedWindows.filter(w => w.tabs?.some(t => t.url));
     if (validWindows.length === 0) {
         alert('No importable windows found in file.');
         return;
