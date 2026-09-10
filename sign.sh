@@ -12,7 +12,7 @@ fi
 
 VERSION="$TAG"
 web-ext sign \
-  -i CLAUDE.md kitsune-windows*.json *.sh *.py instance notes.md \
+  -i CLAUDE.md kitsune-windows*.json *.sh *.py instance notes \
   -i tools package.json package-lock.json \
   -i icons/bolt.png icons/sunny.png icons/kitsune.svg \
   -i LICENSE README.md .gitignore \
