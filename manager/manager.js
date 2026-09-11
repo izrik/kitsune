@@ -8,10 +8,39 @@ let sortColumn = 'title';
 let sortDirection = 'asc';
 let selectedWindowId = null;
 let refreshTimer = null;
+let importing = false;
+// The windows and titles from the last refresh, reused by showWindowInfo so that
+// opening a window's details does not re-query every window all over again.
+let lastWindowDatas = [];
+// Set while a window title is being edited inline, so a refresh cannot rebuild the
+// table out from under the input.
+let editingWindowId = null;
+
+// The current filter text, lower-cased. Kept across refreshes.
+let filterText = '';
+
+const REFRESH_DEBOUNCE_MS = 500;
+
+// The action buttons all operate on "every window as it is right now", which is not a
+// stable idea while an import is creating windows: windows.getAll() would snapshot a
+// moving target, half-applying the action, and confirm() would block the import loop
+// outright. Import re-entry is the worst of them - two concurrent imports interleave
+// and the first to finish clears `importing` while the other is still running.
+function setActionsEnabled(enabled) {
+    for (const button of document.querySelectorAll('#actions-toolbar .action-btn')) {
+        button.disabled = !enabled;
+    }
+}
 
 function scheduleRefresh() {
+    // An import fires tabs.onCreated once per tab. Rebuilding the list thousands of
+    // times mid-import is pure waste; it is refreshed once when the import finishes.
+    if (importing) return;
+    // A refresh rebuilds the whole table, which would tear out an in-progress inline
+    // title edit along with whatever has been typed into it.
+    if (editingWindowId !== null) return;
     clearTimeout(refreshTimer);
-    refreshTimer = setTimeout(populateWindowsList, 200);
+    refreshTimer = setTimeout(populateWindowsList, REFRESH_DEBOUNCE_MS);
 }
 
 function updateSortHeaders() {
@@ -127,14 +156,17 @@ async function showWindowInfo(windowData) {
         bulkMoveBtn.textContent = 'Move';
         bulkBar.appendChild(bulkMoveBtn);
 
-        // Populate move target dropdown with other windows
-        const allWindows = await browser.windows.getAll();
-        for (const win of allWindows) {
-            if (win.id === windowData.window.id) continue;
+        // Reuse the titles from the last list refresh. Querying them again here meant a
+        // second windows.getAll() plus another sessions read per window, doubling the
+        // cost of every refresh whenever a window was selected.
+        const otherWindowOptions = lastWindowDatas
+            .filter(d => d.window.id !== windowData.window.id)
+            .map(d => ({id: d.window.id, label: d.displayTitle}));
+
+        for (const opt of otherWindowOptions) {
             const option = document.createElement('option');
-            option.value = win.id;
-            const title = await dataStore.getTitleForWindow(win.id);
-            option.textContent = title || `Window ${win.id}`;
+            option.value = opt.id;
+            option.textContent = opt.label;
             bulkMoveSelect.appendChild(option);
         }
 
@@ -175,6 +207,7 @@ async function showWindowInfo(windowData) {
         tabs.forEach((tab, index) => {
             const row = document.createElement('tr');
             if (tab.discarded) row.classList.add('tab-unloaded');
+            if (tabMatchesFilter(tab)) row.classList.add('tab-match');
 
             const checkCell = document.createElement('td');
             const checkbox = document.createElement('input');
@@ -282,6 +315,31 @@ async function showWindowInfo(windowData) {
             moveBtn.addEventListener('click', () => browser.windows.create({tabId: tab.id}));
             actionsCell.appendChild(moveBtn);
 
+            if (otherWindowOptions.length > 0) {
+                const moveSelect = document.createElement('select');
+                moveSelect.className = 'move-to-select';
+                moveSelect.title = 'Move to window';
+                const placeholder = document.createElement('option');
+                placeholder.value = '';
+                placeholder.textContent = 'Move to…';
+                placeholder.disabled = true;
+                placeholder.selected = true;
+                moveSelect.appendChild(placeholder);
+                for (const opt of otherWindowOptions) {
+                    const option = document.createElement('option');
+                    option.value = opt.id;
+                    option.textContent = opt.label;
+                    moveSelect.appendChild(option);
+                }
+                moveSelect.addEventListener('change', async () => {
+                    const targetWindowId = parseInt(moveSelect.value);
+                    if (targetWindowId) {
+                        await browser.tabs.move(tab.id, {windowId: targetWindowId, index: -1});
+                    }
+                });
+                actionsCell.appendChild(moveSelect);
+            }
+
             const dupBtn = document.createElement('button');
             dupBtn.className = 'window-btn';
             dupBtn.title = 'Duplicate tab';
@@ -337,32 +395,60 @@ function hideWindowInfo() {
     document.querySelector('#window-details-placeholder').style.display = '';
 }
 
+// How a window relates to the current filter: whether it should be listed at all, and
+// how many of its tabs matched, so a window found by its contents can say why.
+function filterMatch(data) {
+    if (!filterText) return {listed: true, titleMatch: false, matchingTabs: 0};
+
+    const titleMatch = data.displayTitle.toLowerCase().includes(filterText);
+    const matchingTabs = data.window.tabs.filter(tabMatchesFilter).length;
+
+    return {listed: titleMatch || matchingTabs > 0, titleMatch, matchingTabs};
+}
+
+function tabMatchesFilter(tab) {
+    if (!filterText) return false;
+    return (tab.title || '').toLowerCase().includes(filterText)
+        || (tab.url || '').toLowerCase().includes(filterText);
+}
+
 async function populateWindowsList() {
     const currentWindow = await browser.windows.getCurrent();
-    const windowsTableBody = document.querySelector('#windows-table-body');
+    const windows = await browser.windows.getAll({populate: true});
 
+    // One sessions round trip per window, issued together rather than one after another.
+    // Serially this dominated the cost of a refresh: a few hundred windows meant a few
+    // hundred sequential IPC calls, repeated on every tab event.
+    const storedTitles = await Promise.all(windows.map(w => dataStore.getTitleForWindow(w.id)));
+
+    lastWindowDatas = windows.map((window, i) => ({
+        window,
+        displayTitle: storedTitles[i] || 'Window ' + window.id,
+        storedTitle: storedTitles[i] || '',
+        tabCount: window.tabs.length,
+        isCurrentWindow: window.id === currentWindow.id,
+    }));
+
+    renderWindowsList();
+}
+
+// Renders from the last snapshot. Filtering goes through here directly, so typing never
+// costs a browser round trip.
+function renderWindowsList() {
+    const windowsTableBody = document.querySelector('#windows-table-body');
     windowsTableBody.replaceChildren();
 
-    const windows = await browser.windows.getAll({populate: true});
-    const totalTabs = windows.reduce((sum, w) => sum + w.tabs.length, 0);
-    const currentWindowTabs = windows.find(w => w.id === currentWindow.id)?.tabs.length ?? 0;
+    const all = lastWindowDatas;
+    const windowDatas = all.filter(d => filterMatch(d).listed);
 
-    document.querySelector('#window-count').textContent = windows.length;
-    document.querySelector('#total-tab-count').textContent = totalTabs;
+    const shownTabs = windowDatas.reduce((sum, d) => sum + d.tabCount, 0);
+    const totalTabs = all.reduce((sum, d) => sum + d.tabCount, 0);
+    const currentWindowTabs = all.find(d => d.isCurrentWindow)?.tabCount ?? 0;
+    const count = (shown, total) => filterText ? `${shown} of ${total}` : `${total}`;
+
+    document.querySelector('#window-count').textContent = count(windowDatas.length, all.length);
+    document.querySelector('#total-tab-count').textContent = count(shownTabs, totalTabs);
     document.querySelector('#current-window-tab-count').textContent = currentWindowTabs;
-
-    const windowDatas = [];
-    for (const window of windows) {
-        const storedTitle = await dataStore.getTitleForWindow(window.id);
-        const displayTitle = storedTitle || 'Window ' + window.id;
-        windowDatas.push({
-            window,
-            displayTitle,
-            storedTitle: storedTitle || '',
-            tabCount: window.tabs.length,
-            isCurrentWindow: window.id === currentWindow.id,
-        });
-    }
 
     windowDatas.sort((a, b) => {
         let cmp = 0;
@@ -378,7 +464,9 @@ async function populateWindowsList() {
     });
 
     if (selectedWindowId !== null) {
-        const selected = windowDatas.find(d => d.window.id === selectedWindowId);
+        // Looked up in the full snapshot, not the filtered one: filtering a window's row
+        // out of the table should not slam its details pane shut.
+        const selected = all.find(d => d.window.id === selectedWindowId);
         if (selected) {
             showWindowInfo(selected);
         } else {
@@ -410,6 +498,16 @@ async function populateWindowsList() {
         editIcon.alt = '';
         titleWrapper.appendChild(titleSpan);
         titleWrapper.appendChild(editIcon);
+
+        // A window listed only because of what is inside it should say so.
+        const {matchingTabs} = filterMatch(data);
+        if (matchingTabs > 0) {
+            const matchBadge = document.createElement('span');
+            matchBadge.className = 'tab-match-badge';
+            matchBadge.textContent = `${matchingTabs} matching tab${matchingTabs !== 1 ? 's' : ''}`;
+            titleWrapper.appendChild(matchBadge);
+        }
+
         titleCell.appendChild(titleWrapper);
 
         titleSpan.addEventListener('click', (e) => {
@@ -422,10 +520,12 @@ async function populateWindowsList() {
             titleCell.replaceChildren(input);
             input.focus();
             input.select();
+            editingWindowId = data.window.id;
             let committed = false;
             async function commit() {
                 if (committed) return;
                 committed = true;
+                editingWindowId = null;
                 const newTitle = input.value.trim();
                 await dataStore.saveTitleForWindow(data.window.id, newTitle);
                 await dataStore.refreshAppearanceForWindow(data.window.id);
@@ -434,6 +534,7 @@ async function populateWindowsList() {
             function cancel() {
                 if (committed) return;
                 committed = true;
+                editingWindowId = null;
                 titleCell.replaceChildren(titleSpan);
             }
             input.addEventListener('keydown', (e) => {
@@ -532,6 +633,18 @@ async function populateWindowsList() {
 
         windowsTableBody.appendChild(row);
     }
+
+    if (windowDatas.length === 0) {
+        const row = document.createElement('tr');
+        const cell = document.createElement('td');
+        cell.colSpan = 4;
+        cell.className = 'empty-state';
+        cell.textContent = filterText
+            ? `No windows or tabs match “${filterText}”.`
+            : 'No windows open.';
+        row.appendChild(cell);
+        windowsTableBody.appendChild(row);
+    }
 }
 
 async function exportWindowsData() {
@@ -587,6 +700,210 @@ async function exportWindowsData() {
     }
 }
 
+// Exports made before the sleep/wake feature was removed split windows into
+// openWindows and sleepingWindows instead of a single windows array. The sleeping
+// distinction is gone, but the windows under it are still worth importing, and the
+// fields we read (title, tabs[].url) are identical in both shapes.
+function windowsFromImportData(data) {
+    if (Array.isArray(data.windows)) return data.windows;
+
+    const legacy = ['openWindows', 'sleepingWindows'].filter(k => Array.isArray(data[k]));
+    if (legacy.length > 0) return legacy.flatMap(k => data[k]);
+
+    return null;
+}
+
+// Import safety valve: if this many tabs refuse to be created unloaded, something is
+// wrong with the API rather than with individual URLs, and continuing would load every
+// remaining tab at once. Stop instead.
+const LOADED_FALLBACK_LIMIT = 20;
+const LARGE_IMPORT_WINDOWS = 25;
+
+// Thrown only for conditions that should stop the whole import, so that the per-window
+// error handling can tell them apart from one window failing to open.
+class ImportAbort extends Error {}
+
+// Firefox refuses to open privileged URLs from an extension - it rejects them with
+// "Illegal URL" - and there is no way around it. Exports are full of them (about:home
+// and about:newtab especially), so they are skipped and counted rather than treated as
+// errors. about:blank is the one about: page extensions may open.
+const PRIVILEGED_SCHEMES = ['chrome:', 'javascript:', 'data:', 'file:'];
+
+function isRestorableUrl(url) {
+    if (!url) return false;
+    const scheme = url.slice(0, url.indexOf(':') + 1).toLowerCase();
+    if (scheme === 'about:') return url.split(/[?#]/)[0].toLowerCase() === 'about:blank';
+    return !PRIVILEGED_SCHEMES.includes(scheme);
+}
+
+// Firefox accepts `title` only on a tab created with `discarded: true` - which is what
+// keeps the tab strip readable when nothing has loaded yet. A URL that refuses to be
+// created discarded (privileged pages, mainly) is retried as a normal tab.
+async function createImportedTabs(windowId, tabs, onTabDone) {
+    let loadedFallbacks = 0;
+    const failures = [];
+
+    for (const [i, tab] of tabs.entries()) {
+        const props = {windowId, url: tab.url, active: false, index: i + 1};
+        try {
+            await browser.tabs.create({
+                ...props,
+                discarded: true,
+                ...(tab.title ? {title: tab.title} : {}),
+            });
+        } catch (e) {
+            console.debug(`createImportedTabs: could not discard ${tab.url}:`, e);
+            if (++loadedFallbacks > LOADED_FALLBACK_LIMIT) {
+                throw new ImportAbort(
+                    `${loadedFallbacks} tabs could not be created in an unloaded state. ` +
+                    'Stopping rather than loading every remaining tab at once.'
+                );
+            }
+            try {
+                await browser.tabs.create(props);
+            } catch (e2) {
+                console.debug(`createImportedTabs: could not create ${tab.url}:`, e2);
+                failures.push(tab.url);
+            }
+        }
+        onTabDone?.();
+    }
+
+    return failures;
+}
+
+async function importWindowsData(file) {
+    if (importing) return;
+
+    let data;
+    try {
+        data = JSON.parse(await file.text());
+    } catch (e) {
+        alert('Error reading import file: ' + e.message);
+        return;
+    }
+
+    const importedWindows = windowsFromImportData(data);
+    if (!importedWindows) {
+        alert('Invalid import file: no windows found.');
+        return;
+    }
+
+    const plural = (n, word) => `${n} ${word}${n !== 1 ? 's' : ''}`;
+
+    // Work out what is actually openable before touching the browser, so the counts in
+    // the confirm dialog are the counts the user will get.
+    const plans = importedWindows
+        .map(w => {
+            const tabs = (w.tabs ?? []).filter(t => t.url);
+            return {
+                title: w.title || '',
+                restorable: tabs.filter(t => isRestorableUrl(t.url)),
+                skipped: tabs.filter(t => !isRestorableUrl(t.url)).map(t => t.url),
+            };
+        })
+        .filter(plan => plan.restorable.length > 0 || plan.skipped.length > 0);
+
+    if (plans.length === 0) {
+        alert('No importable windows found in file.');
+        return;
+    }
+
+    const tabCount = plans.reduce((sum, plan) => sum + plan.restorable.length, 0);
+    const skipped = plans.flatMap(plan => plan.skipped);
+
+    const notes = [];
+    if (skipped.length > 0) {
+        notes.push(
+            `${plural(skipped.length, 'tab')} cannot be reopened by an extension ` +
+            '(privileged pages such as about:home, and local files) and will be skipped.'
+        );
+    }
+    if (plans.length > LARGE_IMPORT_WINDOWS) {
+        notes.push(
+            'Tabs are created unloaded, so they will not all load at once, but this ' +
+            'many windows will still take a while to open.'
+        );
+    }
+    const note = notes.length > 0 ? '\n\n' + notes.join('\n\n') : '';
+
+    if (!confirm(`Open ${plural(plans.length, 'window')} with ${plural(tabCount, 'tab')}?${note}`)) return;
+
+    const status = document.querySelector('#import-status');
+    let windowsDone = 0;
+    let tabsDone = 0;
+    const failures = [];
+    const windowFailures = [];
+    const showProgress = () => {
+        status.textContent =
+            `Importing… ${plural(windowsDone, 'window')} of ${plans.length}, ` +
+            `${tabsDone} of ${tabCount} tabs`;
+    };
+
+    importing = true;
+    setActionsEnabled(false);
+    status.hidden = false;
+    showProgress();
+
+    try {
+        for (const plan of plans) {
+            try {
+                // windows.create always loads what it opens, so the seed tab is the one
+                // tab per window that cannot be avoided loading. A window with nothing
+                // restorable still gets created - its title is worth keeping - and
+                // omitting url opens the new tab page.
+                const seed = plan.restorable[0];
+                const newWindow = await browser.windows.create(seed ? {url: seed.url} : {});
+                if (seed) {
+                    tabsDone++;
+                    showProgress();
+                }
+
+                failures.push(...await createImportedTabs(newWindow.id, plan.restorable.slice(1), () => {
+                    tabsDone++;
+                    showProgress();
+                }));
+
+                if (plan.title && !/^Window \d+$/.test(plan.title)) {
+                    await dataStore.saveTitleForWindow(newWindow.id, plan.title);
+                    await dataStore.refreshAppearanceForWindow(newWindow.id);
+                }
+            } catch (e) {
+                if (e instanceof ImportAbort) throw e;
+                // One window failing is not a reason to abandon the rest.
+                console.debug(`importWindowsData: could not import "${plan.title}":`, e);
+                windowFailures.push(plan.title || '(untitled)');
+            }
+
+            windowsDone++;
+            showProgress();
+        }
+    } catch (e) {
+        alert(`Import stopped after ${plural(windowsDone, 'window')}.\n\n${e.message}`);
+    } finally {
+        importing = false;
+        setActionsEnabled(true);
+        status.hidden = true;
+        status.textContent = '';
+        await populateWindowsList();
+    }
+
+    const report = [];
+    if (skipped.length > 0) {
+        console.debug('importWindowsData: skipped privileged URLs:', skipped);
+        report.push(`${plural(skipped.length, 'tab')} skipped (privileged pages or local files).`);
+    }
+    if (failures.length > 0) {
+        console.debug('importWindowsData: tabs that could not be created:', failures);
+        report.push(`${plural(failures.length, 'tab')} could not be opened.`);
+    }
+    if (windowFailures.length > 0) {
+        console.debug('importWindowsData: windows that could not be created:', windowFailures);
+        report.push(`${plural(windowFailures.length, 'window')} could not be opened.`);
+    }
+    if (report.length > 0) alert(report.join('\n') + '\n\nSee the console for details.');
+}
+
 async function reloadAllTabsInWindow(windowId) {
     const win = await browser.windows.get(windowId, {populate: true});
     for (const tab of win.tabs) {
@@ -638,10 +955,43 @@ window.onload = async () => {
     updateSortHeaders();
     await populateWindowsList();
 
+    const filterInput = document.querySelector('#window-filter');
+    const filterClear = document.querySelector('#window-filter-clear');
+
+    function applyFilter() {
+        filterText = filterInput.value.trim().toLowerCase();
+        filterClear.hidden = filterInput.value === '';
+        renderWindowsList();
+    }
+
+    function clearFilter() {
+        filterInput.value = '';
+        applyFilter();
+        filterInput.focus();
+    }
+
+    filterInput.addEventListener('input', applyFilter);
+    filterInput.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        // Escape belongs to the filter while typing in it, not to the details pane.
+        e.stopPropagation();
+        clearFilter();
+    });
+    filterClear.addEventListener('click', clearFilter);
+
     document.querySelector('#window-details-close').addEventListener('click', hideWindowInfo);
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hideWindowInfo(); });
 
     document.querySelector('#export-button').addEventListener('click', exportWindowsData);
+
+    const importFileInput = document.querySelector('#import-file-input');
+    document.querySelector('#import-button').addEventListener('click', () => importFileInput.click());
+    importFileInput.addEventListener('change', async () => {
+        if (importFileInput.files[0]) {
+            await importWindowsData(importFileInput.files[0]);
+            importFileInput.value = '';
+        }
+    });
     document.querySelector('#minimize-all-windows-button').addEventListener('click', minimizeAllWindows);
     document.querySelector('#unload-all-tabs-button').addEventListener('click', unloadAllTabs);
     document.querySelector('#refresh-appearance-button').addEventListener('click', refreshAppearanceForAllWindows);

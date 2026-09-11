@@ -89,6 +89,65 @@
             margin-bottom: 6px;
         }
 
+        /* ── Filter ───────────────────────── */
+
+        #filter-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+
+        #window-filter {
+            flex: 1;
+            min-width: 0;
+            padding: 6px 10px;
+            font-family: inherit;
+            font-size: 12px;
+            color: var(--text);
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 5px;
+        }
+
+        #window-filter:focus {
+            outline: none;
+            border-color: #7f9cc0;
+        }
+
+        #window-filter-clear {
+            padding: 4px 9px;
+            font-size: 14px;
+            line-height: 1;
+            color: var(--text-muted);
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        #window-filter-clear:hover { color: var(--text); background: var(--row-hover); }
+
+        .tab-match-badge {
+            flex-shrink: 0;
+            padding: 1px 6px;
+            font-size: 10px;
+            color: var(--text-muted);
+            background: var(--row-hover);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            white-space: nowrap;
+        }
+
+        .tabs-table tr.tab-match td { background: rgba(127, 156, 192, 0.16); }
+
+        .empty-state {
+            padding: 18px 10px !important;
+            text-align: center;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
         /* ── Windows table ────────────────── */
 
         #windows-table-wrapper {
@@ -277,6 +336,20 @@
         .tabs-table tr.tab-unloaded td:nth-child(3),
         .tabs-table tr.tab-unloaded td:nth-child(4) { opacity: 0.55; }
 
+        .move-to-select {
+            font: inherit;
+            font-size: 10px;
+            padding: 2px 2px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            background: var(--surface);
+            color: var(--text-muted);
+            cursor: pointer;
+            max-width: 90px;
+        }
+
+        .move-to-select:hover { border-color: var(--accent); }
+
         #window-details-content {
             padding: 10px 12px;
             font-size: 11px;
@@ -399,6 +472,13 @@
 
         /* ── Actions toolbar ──────────────── */
 
+        #import-status {
+            margin-top: 8px;
+            font-size: 12px;
+            color: var(--text-muted);
+            font-variant-numeric: tabular-nums;
+        }
+
         #actions-toolbar {
             display: flex;
             flex-wrap: wrap;
@@ -418,12 +498,17 @@
             white-space: nowrap;
         }
 
-        .action-btn:hover {
+        .action-btn:hover:not(:disabled) {
             background: var(--row-hover);
             border-color: #a0b0c8;
         }
 
-        .action-btn:active { transform: translateY(1px); }
+        .action-btn:active:not(:disabled) { transform: translateY(1px); }
+
+        .action-btn:disabled {
+            opacity: 0.45;
+            cursor: default;
+        }
     </style>
 </head>
 <body>
@@ -441,8 +526,36 @@
 
 <div id="main-content">
 
+    <div id="actions-section">
+        <div class="section-label">Actions</div>
+        <div id="actions-toolbar">
+            <div id="export-section">
+                <button id="export-button" class="action-btn">Export Windows Data</button>
+            </div>
+            <div id="import-section">
+                <button id="import-button" class="action-btn">Import Windows Data</button>
+                <input id="import-file-input" type="file" accept=".json" style="display:none"/>
+            </div>
+            <div id="minimize-all-windows-section">
+                <button id="minimize-all-windows-button" class="action-btn">Minimize All Windows</button>
+            </div>
+            <div id="unload-all-tabs-section">
+                <button id="unload-all-tabs-button" class="action-btn">Unload All Tabs</button>
+            </div>
+            <div id="refresh-appearance-section">
+                <button id="refresh-appearance-button" class="action-btn">Refresh Window Titles</button>
+            </div>
+        </div>
+        <div id="import-status" hidden></div>
+    </div>
+
     <div id="windows-list">
         <div class="section-label">Windows</div>
+        <div id="filter-row">
+            <input id="window-filter" type="text" autocomplete="off" spellcheck="false"
+                   placeholder="Filter by window title, tab title or URL…"/>
+            <button id="window-filter-clear" title="Clear filter (Esc)" hidden>×</button>
+        </div>
         <div id="windows-table-wrapper">
             <table id="windows-table">
                 <thead>
@@ -466,24 +579,6 @@
         <div id="window-details-content"></div>
     </div>
     <div id="window-details-placeholder">Select a window to see its details</div>
-
-    <div id="actions-section">
-        <div class="section-label">Actions</div>
-        <div id="actions-toolbar">
-            <div id="export-section">
-                <button id="export-button" class="action-btn">Export Windows Data</button>
-            </div>
-            <div id="minimize-all-windows-section">
-                <button id="minimize-all-windows-button" class="action-btn">Minimize All Windows</button>
-            </div>
-            <div id="unload-all-tabs-section">
-                <button id="unload-all-tabs-button" class="action-btn">Unload All Tabs</button>
-            </div>
-            <div id="refresh-appearance-section">
-                <button id="refresh-appearance-button" class="action-btn">Refresh Window Titles</button>
-            </div>
-        </div>
-    </div>
 
 </div>
 
