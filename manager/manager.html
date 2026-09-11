@@ -89,6 +89,65 @@
             margin-bottom: 6px;
         }
 
+        /* ── Filter ───────────────────────── */
+
+        #filter-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+
+        #window-filter {
+            flex: 1;
+            min-width: 0;
+            padding: 6px 10px;
+            font-family: inherit;
+            font-size: 12px;
+            color: var(--text);
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 5px;
+        }
+
+        #window-filter:focus {
+            outline: none;
+            border-color: #7f9cc0;
+        }
+
+        #window-filter-clear {
+            padding: 4px 9px;
+            font-size: 14px;
+            line-height: 1;
+            color: var(--text-muted);
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        #window-filter-clear:hover { color: var(--text); background: var(--row-hover); }
+
+        .tab-match-badge {
+            flex-shrink: 0;
+            padding: 1px 6px;
+            font-size: 10px;
+            color: var(--text-muted);
+            background: var(--row-hover);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            white-space: nowrap;
+        }
+
+        .tabs-table tr.tab-match td { background: rgba(127, 156, 192, 0.16); }
+
+        .empty-state {
+            padding: 18px 10px !important;
+            text-align: center;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
         /* ── Windows table ────────────────── */
 
         #windows-table-wrapper {
@@ -492,6 +551,11 @@
 
     <div id="windows-list">
         <div class="section-label">Windows</div>
+        <div id="filter-row">
+            <input id="window-filter" type="text" autocomplete="off" spellcheck="false"
+                   placeholder="Filter by window title, tab title or URL…"/>
+            <button id="window-filter-clear" title="Clear filter (Esc)" hidden>×</button>
+        </div>
         <div id="windows-table-wrapper">
             <table id="windows-table">
                 <thead>

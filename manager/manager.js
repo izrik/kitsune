@@ -16,6 +16,9 @@ let lastWindowDatas = [];
 // table out from under the input.
 let editingWindowId = null;
 
+// The current filter text, lower-cased. Kept across refreshes.
+let filterText = '';
+
 const REFRESH_DEBOUNCE_MS = 500;
 
 // The action buttons all operate on "every window as it is right now", which is not a
@@ -204,6 +207,7 @@ async function showWindowInfo(windowData) {
         tabs.forEach((tab, index) => {
             const row = document.createElement('tr');
             if (tab.discarded) row.classList.add('tab-unloaded');
+            if (tabMatchesFilter(tab)) row.classList.add('tab-match');
 
             const checkCell = document.createElement('td');
             const checkbox = document.createElement('input');
@@ -391,33 +395,60 @@ function hideWindowInfo() {
     document.querySelector('#window-details-placeholder').style.display = '';
 }
 
+// How a window relates to the current filter: whether it should be listed at all, and
+// how many of its tabs matched, so a window found by its contents can say why.
+function filterMatch(data) {
+    if (!filterText) return {listed: true, titleMatch: false, matchingTabs: 0};
+
+    const titleMatch = data.displayTitle.toLowerCase().includes(filterText);
+    const matchingTabs = data.window.tabs.filter(tabMatchesFilter).length;
+
+    return {listed: titleMatch || matchingTabs > 0, titleMatch, matchingTabs};
+}
+
+function tabMatchesFilter(tab) {
+    if (!filterText) return false;
+    return (tab.title || '').toLowerCase().includes(filterText)
+        || (tab.url || '').toLowerCase().includes(filterText);
+}
+
 async function populateWindowsList() {
     const currentWindow = await browser.windows.getCurrent();
-    const windowsTableBody = document.querySelector('#windows-table-body');
-
-    windowsTableBody.replaceChildren();
-
     const windows = await browser.windows.getAll({populate: true});
-    const totalTabs = windows.reduce((sum, w) => sum + w.tabs.length, 0);
-    const currentWindowTabs = windows.find(w => w.id === currentWindow.id)?.tabs.length ?? 0;
-
-    document.querySelector('#window-count').textContent = windows.length;
-    document.querySelector('#total-tab-count').textContent = totalTabs;
-    document.querySelector('#current-window-tab-count').textContent = currentWindowTabs;
 
     // One sessions round trip per window, issued together rather than one after another.
     // Serially this dominated the cost of a refresh: a few hundred windows meant a few
     // hundred sequential IPC calls, repeated on every tab event.
     const storedTitles = await Promise.all(windows.map(w => dataStore.getTitleForWindow(w.id)));
 
-    const windowDatas = windows.map((window, i) => ({
+    lastWindowDatas = windows.map((window, i) => ({
         window,
         displayTitle: storedTitles[i] || 'Window ' + window.id,
         storedTitle: storedTitles[i] || '',
         tabCount: window.tabs.length,
         isCurrentWindow: window.id === currentWindow.id,
     }));
-    lastWindowDatas = windowDatas;
+
+    renderWindowsList();
+}
+
+// Renders from the last snapshot. Filtering goes through here directly, so typing never
+// costs a browser round trip.
+function renderWindowsList() {
+    const windowsTableBody = document.querySelector('#windows-table-body');
+    windowsTableBody.replaceChildren();
+
+    const all = lastWindowDatas;
+    const windowDatas = all.filter(d => filterMatch(d).listed);
+
+    const shownTabs = windowDatas.reduce((sum, d) => sum + d.tabCount, 0);
+    const totalTabs = all.reduce((sum, d) => sum + d.tabCount, 0);
+    const currentWindowTabs = all.find(d => d.isCurrentWindow)?.tabCount ?? 0;
+    const count = (shown, total) => filterText ? `${shown} of ${total}` : `${total}`;
+
+    document.querySelector('#window-count').textContent = count(windowDatas.length, all.length);
+    document.querySelector('#total-tab-count').textContent = count(shownTabs, totalTabs);
+    document.querySelector('#current-window-tab-count').textContent = currentWindowTabs;
 
     windowDatas.sort((a, b) => {
         let cmp = 0;
@@ -433,7 +464,9 @@ async function populateWindowsList() {
     });
 
     if (selectedWindowId !== null) {
-        const selected = windowDatas.find(d => d.window.id === selectedWindowId);
+        // Looked up in the full snapshot, not the filtered one: filtering a window's row
+        // out of the table should not slam its details pane shut.
+        const selected = all.find(d => d.window.id === selectedWindowId);
         if (selected) {
             showWindowInfo(selected);
         } else {
@@ -465,6 +498,16 @@ async function populateWindowsList() {
         editIcon.alt = '';
         titleWrapper.appendChild(titleSpan);
         titleWrapper.appendChild(editIcon);
+
+        // A window listed only because of what is inside it should say so.
+        const {matchingTabs} = filterMatch(data);
+        if (matchingTabs > 0) {
+            const matchBadge = document.createElement('span');
+            matchBadge.className = 'tab-match-badge';
+            matchBadge.textContent = `${matchingTabs} matching tab${matchingTabs !== 1 ? 's' : ''}`;
+            titleWrapper.appendChild(matchBadge);
+        }
+
         titleCell.appendChild(titleWrapper);
 
         titleSpan.addEventListener('click', (e) => {
@@ -588,6 +631,18 @@ async function populateWindowsList() {
 
         row.appendChild(actionsCell);
 
+        windowsTableBody.appendChild(row);
+    }
+
+    if (windowDatas.length === 0) {
+        const row = document.createElement('tr');
+        const cell = document.createElement('td');
+        cell.colSpan = 4;
+        cell.className = 'empty-state';
+        cell.textContent = filterText
+            ? `No windows or tabs match “${filterText}”.`
+            : 'No windows open.';
+        row.appendChild(cell);
         windowsTableBody.appendChild(row);
     }
 }
@@ -899,6 +954,30 @@ window.onload = async () => {
 
     updateSortHeaders();
     await populateWindowsList();
+
+    const filterInput = document.querySelector('#window-filter');
+    const filterClear = document.querySelector('#window-filter-clear');
+
+    function applyFilter() {
+        filterText = filterInput.value.trim().toLowerCase();
+        filterClear.hidden = filterInput.value === '';
+        renderWindowsList();
+    }
+
+    function clearFilter() {
+        filterInput.value = '';
+        applyFilter();
+        filterInput.focus();
+    }
+
+    filterInput.addEventListener('input', applyFilter);
+    filterInput.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        // Escape belongs to the filter while typing in it, not to the details pane.
+        e.stopPropagation();
+        clearFilter();
+    });
+    filterClear.addEventListener('click', clearFilter);
 
     document.querySelector('#window-details-close').addEventListener('click', hideWindowInfo);
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hideWindowInfo(); });
