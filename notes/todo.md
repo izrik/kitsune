@@ -34,9 +34,5 @@ Not blocking 1.0. See `v1-features.md` for what is.
 
 - Drop `activeTab` from the manifest — the `tabs` permission already covers what the
   popup and manager do, and fewer permissions is an easier AMO review.
-- Untracked scratch in the working tree: `1.py` (an unrelated Ollama script, nothing to
-  do with Kitsune), `get_version.sh` (an abandoned versioning scheme, superseded by the
-  tag check now in `build.sh`/`sign.sh`), `instance/`, `tools/import.js`.
-- Two stale stashes: `stash@{0}` is icon assets on the long-merged `ui-improvements`,
-  `stash@{1}` is 15 lines in `kitsune.js` from before that file was gutted. Both look
-  droppable.
+- `instance/` is deliberately untracked and excluded from the build. It holds the
+  exports the notes here cite as evidence, so it is not pending cleanup.
