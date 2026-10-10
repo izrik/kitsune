@@ -99,6 +99,16 @@ have their own console.
 Manual only — there is no automated test suite. Exercise changes with several windows
 open, at least one of them titled, and check that titles survive a browser restart.
 
+### Committing a change
+
+Before committing, add an entry to the `## [Unreleased]` section of `CHANGELOG.md` for
+anything a user would notice — a new button or page, a changed default, a renamed
+action, a changed export or import format, a fixed bug. Write it from the reader's side
+("exports made before v0.3 can be imported again"), not the committer's ("refactored
+`windowsFromImportData`"), and cite the issue or PR number. An internal refactor with no
+outward effect needs no entry. Don't add a version heading or a date — tagging a release
+is a separate, deliberate step.
+
 ### Building and signing
 
 `build.sh` (produces `web-ext-artifacts/kitsune-<version>.zip`) and `sign.sh` (submits to
@@ -115,6 +125,7 @@ files kept deliberately out of git.
 
 ```
 /
+├── CHANGELOG.md        # Release history; add to [Unreleased] as you change things
 ├── manifest.json       # Extension manifest (v3)
 ├── background.js       # Background module: refreshes window titles on window/tab events
 ├── datastore.js        # DataStore + getDataStore() singleton
