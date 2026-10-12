@@ -8,4 +8,9 @@ Inspired by https://github.com/tpamula/webextension-window-titler
 ## Documentation
 
 - [CHANGELOG.md](CHANGELOG.md) — what changed in each release
-- [CLAUDE.md](CLAUDE.md) — architecture, conventions and development workflow
+- [CLAUDE.md](CLAUDE.md) — how to load the extension, conventions and development
+  workflow
+- [docs/architecture.md](docs/architecture.md) — how the extension is put together,
+  where titles are stored, and the export/import format
+- [docs/building-and-signing.md](docs/building-and-signing.md) — building a package and
+  signing a release
