@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      # web-ext is the tool build.sh and sign.sh already use; there is no
+      # package.json in git, so it is installed here, not from a manifest.
+      - name: Install web-ext
+        run: npm install --global web-ext
+      # Validates manifest.json and the extension's JavaScript against the
+      # rules AMO applies. Fails on errors; warnings and notices are reported
+      # but do not fail the run, which is web-ext's own default.
+      - name: Lint the extension
+        run: web-ext lint --source-dir .

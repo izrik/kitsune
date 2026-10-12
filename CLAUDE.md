@@ -23,6 +23,11 @@ the manager page each have their own console. There is no dev server.
 several windows open, at least one of them titled, and check that titles survive a browser
 restart.
 
+**Lint:** `web-ext lint --source-dir .` — validates `manifest.json` and the extension's
+JavaScript against the rules AMO applies. Needs no tag and no credentials, unlike
+`build.sh`/`sign.sh`. This is what CI runs on every pull request; see *Continuous
+integration* below.
+
 **Build:** `./build.sh` (zip into `web-ext-artifacts/`) and `./sign.sh` (submit to AMO,
 unlisted channel). Both refuse to run unless the current commit carries a tag matching
 `manifest.json`'s version, so neither is usable as a routine check — see
@@ -83,6 +88,25 @@ Hyphens, no slashes. Issue-driven work is prefixed with the issue number
    history landed as a merged PR.
 6. **Handle feedback.** Push follow-up commits to the same branch rather than opening a
    new PR.
+
+## Continuous integration
+
+Pull requests are gated by [`.github/workflows/ci.yml`](.github/workflows/ci.yml), which
+runs on every PR and on pushes to `master`. It installs `web-ext` and runs the one check
+this repo has:
+
+```sh
+npm install --global web-ext   # or use a web-ext you already have
+web-ext lint --source-dir .
+```
+
+The lint fails on errors only; the warnings it reports about `build.sh`, `sign.sh` and
+`tools/*.py` are pre-existing and concern files that `build.sh` excludes from the packaged
+add-on anyway. Run it before pushing and the check will be green.
+
+Nothing else runs in CI: there is no test suite (see issue #24), and `build.sh`/`sign.sh`
+need a matching git tag — and, for signing, AMO credentials — so neither can run on a pull
+request.
 
 ## Project ecosystem
 
