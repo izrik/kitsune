@@ -36,6 +36,10 @@ session read per window is the thing making the page feel broken.
 - **`CLAUDE.md` describes the extension as it is**, rather than as it was around
   v0.1, and `notes/` records what is in scope for 1.0 and what has been deferred
   past it (#18).
+- **A security policy** (#26). [`SECURITY.md`](SECURITY.md) says where to send a
+  vulnerability report — GitHub's private vulnerability reporting rather than a
+  public issue — what is in scope, and what a reporter can expect. Dependabot now
+  watches the GitHub Actions that CI uses, on a weekly schedule.
 
 ### Changed
 

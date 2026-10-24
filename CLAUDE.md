@@ -108,6 +108,20 @@ Nothing else runs in CI: there is no test suite (see issue #24), and `build.sh`/
 need a matching git tag — and, for signing, AMO credentials — so neither can run on a pull
 request.
 
+## Security
+
+[`SECURITY.md`](SECURITY.md) is where a vulnerability report goes — GitHub's private
+vulnerability reporting, not a public issue, since this repository is public. It also sets
+out what is in scope (this repository's code and the signed add-on) and what isn't
+(Firefox itself, build-time tools). Dependabot watches the GitHub Actions in
+`.github/workflows/`, which are the only versioned dependencies the repository declares;
+the extension bundles no libraries and there is no `package.json` in git, so there is no
+dependency manifest for an audit tool to read.
+
+Don't paste a credential anywhere in the tree, not even an expired one: `sign.sh` reads
+AMO credentials from `$AMO_JWT_ISSUER` and `$AMO_JWT_SECRET` and nothing else should hold
+them.
+
 ## Project ecosystem
 
 Kitsune is one of several related projects. Its page in

@@ -11,6 +11,7 @@ Inspired by https://github.com/tpamula/webextension-window-titler
 ## Documentation
 
 - [CHANGELOG.md](CHANGELOG.md) — what changed in each release
+- [SECURITY.md](SECURITY.md) — how to report a vulnerability, and what is in scope
 - [CLAUDE.md](CLAUDE.md) — how to load the extension, conventions and development
   workflow
 - [docs/architecture.md](docs/architecture.md) — how the extension is put together,
